@@ -1,0 +1,361 @@
+/* Shared course stylesheet. Linked by every page: hub, course index, lesson, reference. */
+
+:root {
+  --bg: #fdfcf8;
+  --ink: #22201c;
+  --ink-soft: #5c574d;
+  --accent: #7a2e2e;      /* deep red, used sparingly */
+  --accent-soft: #a9563f;
+  --rule: #d8d3c6;
+  --card: #f5f2ea;
+  --scripture-bg: #f7f4ec;
+  --good: #2e6b3f;
+  --bad: #8a2f2f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1a17;
+    --ink: #e8e4da;
+    --ink-soft: #a89f8f;
+    --accent: #d98b6a;
+    --accent-soft: #c07a5e;
+    --rule: #3b372f;
+    --card: #26231e;
+    --scripture-bg: #242119;
+    --good: #7fbf90;
+    --bad: #d98a8a;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  font-size: 1.06rem;
+  line-height: 1.65;
+}
+
+main {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 5rem;
+}
+
+h1, h2, h3 {
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+h1 { font-size: 1.9rem; margin: 0.2rem 0 0.4rem; }
+h2 { font-size: 1.35rem; margin-top: 2.4rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.3rem; }
+h3 { font-size: 1.1rem; margin-top: 1.8rem; }
+
+.kicker {
+  font-family: 'Gill Sans', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.lesson-meta {
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  margin-bottom: 2rem;
+}
+
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:hover { color: var(--accent-soft); }
+
+/* Scripture blocks */
+blockquote.scripture {
+  margin: 1.4rem 0;
+  padding: 1rem 1.3rem;
+  background: var(--scripture-bg);
+  border-left: 3px solid var(--accent);
+  font-style: italic;
+}
+blockquote.scripture .ref {
+  display: block;
+  margin-top: 0.5rem;
+  font-style: normal;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+
+/* Callout cards */
+.card {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 1rem 1.3rem;
+  margin: 1.4rem 0;
+}
+.card .card-title {
+  font-family: 'Gill Sans', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 0.4rem;
+}
+.card.do-first { border-left: 4px solid var(--good); }
+.card.teachers  { border-left: 4px solid var(--accent-soft); }
+.card.memory    { border-left: 4px solid var(--accent); }
+
+/* Term styling: glossary words */
+.term { border-bottom: 1px dotted var(--accent-soft); cursor: help; }
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1.2rem 0;
+  font-size: 0.96rem;
+}
+th, td {
+  text-align: left;
+  padding: 0.45rem 0.7rem;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+th {
+  font-family: 'Gill Sans', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+/* Quiz widget (paired with quiz.js) */
+.quiz { margin: 1.4rem 0; }
+.quiz .q {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 1rem 1.3rem;
+  margin-bottom: 1rem;
+}
+.quiz .q p.stem { margin-top: 0; font-weight: 600; }
+.quiz button.opt {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin: 0.4rem 0;
+  padding: 0.55rem 0.8rem;
+  font: inherit;
+  font-size: 0.98rem;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.quiz button.opt:hover { border-color: var(--accent-soft); }
+.quiz button.opt.correct { border-color: var(--good); background: color-mix(in srgb, var(--good) 12%, var(--bg)); }
+.quiz button.opt.wrong   { border-color: var(--bad);  background: color-mix(in srgb, var(--bad) 12%, var(--bg)); }
+.quiz .feedback { font-size: 0.94rem; color: var(--ink-soft); margin: 0.5rem 0 0; display: none; }
+.quiz .feedback.shown { display: block; }
+
+/* Footer nav between lessons */
+.lesson-nav {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.95rem;
+}
+
+.footnote { font-size: 0.88rem; color: var(--ink-soft); }
+
+/* Shared left sidebar (injected by nav.js) */
+.sidenav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 250px;
+  overflow-y: auto;
+  background: var(--card);
+  border-right: 1px solid var(--rule);
+  padding: 1.1rem 0.9rem 2rem;
+  font-family: 'Gill Sans', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.86rem;
+  z-index: 20;
+}
+body.has-sidenav { padding-left: 250px; }
+
+.sidenav .nav-home {
+  display: inline-block;
+  margin-bottom: 0.5rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+.sidenav .nav-home:hover { color: var(--accent); }
+.sidenav .nav-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.sidenav .nav-title a { color: inherit; text-decoration: none; }
+.sidenav .nav-count { color: var(--ink-soft); margin-top: 0.2rem; }
+.sidenav .nav-bar {
+  height: 5px;
+  background: var(--rule);
+  border-radius: 3px;
+  margin: 0.5rem 0 0.4rem;
+  overflow: hidden;
+}
+.sidenav .nav-bar-fill {
+  height: 100%;
+  width: 0;
+  background: var(--good);
+  border-radius: 3px;
+  transition: width 0.25s ease;
+}
+.sidenav .nav-hide-done {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  cursor: pointer;
+  user-select: none;
+}
+.sidenav .nav-hide-done input {
+  margin: 0;
+  accent-color: var(--good);
+  cursor: pointer;
+}
+.sidenav li.hidden-done { display: none; }
+
+.sidenav .nav-section {
+  margin: 1.1rem 0 0.3rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.sidenav ul { list-style: none; margin: 0; padding: 0; }
+.sidenav li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.22rem 0.3rem;
+  border-radius: 5px;
+}
+.sidenav li.current { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.sidenav li a {
+  color: var(--ink);
+  text-decoration: none;
+  line-height: 1.35;
+  flex: 1;
+}
+.sidenav li a:hover { color: var(--accent); }
+.sidenav li.current a { color: var(--accent); font-weight: 600; }
+.sidenav li.done a { color: var(--ink-soft); text-decoration: line-through; }
+.sidenav li.ref a { color: var(--ink-soft); }
+.sidenav li.ref a:hover { color: var(--accent); }
+
+.sidenav .done-toggle {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  padding: 0;
+  border: 1.5px solid var(--ink-soft);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+.sidenav li.done .done-toggle {
+  background: var(--good);
+  border-color: var(--good);
+}
+
+.nav-burger {
+  display: none;
+  position: fixed;
+  top: 0.7rem;
+  left: 0.7rem;
+  z-index: 30;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.45rem 0.6rem;
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button.mark-complete {
+  display: block;
+  width: 100%;
+  margin: 2.2rem 0 0;
+  padding: 0.8rem 1rem;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--bg);
+  background: var(--good);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+button.mark-complete.is-done {
+  background: var(--card);
+  color: var(--good);
+  border: 1.5px solid var(--good);
+}
+
+@media (max-width: 960px) {
+  body.has-sidenav { padding-left: 0; }
+  .sidenav { transform: translateX(-100%); transition: transform 0.2s ease; }
+  .sidenav.open { transform: none; box-shadow: 0 0 30px rgba(0,0,0,0.35); }
+  .nav-burger { display: block; }
+}
+
+@media print {
+  body { background: #fff; color: #000; font-size: 11pt; }
+  .quiz button.opt { border: 1px solid #999; }
+  a { color: #000; }
+  .sidenav, .nav-burger, button.mark-complete { display: none; }
+  body.has-sidenav { padding-left: 0; }
+}
+
+/* Hub landing page: one card per study. */
+.study-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin: 1.6rem 0;
+}
+.study-card {
+  display: block;
+  padding: 1.1rem 1.2rem;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
+  text-decoration: none;
+  color: inherit;
+}
+.study-card:hover { border-color: var(--accent); color: inherit; }
+.study-card .study-name {
+  font-family: 'Gill Sans', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+.study-card .study-meta { color: var(--ink-soft); font-size: 0.9rem; margin-top: 0.15rem; }
+.study-card .study-blurb { margin-top: 0.5rem; line-height: 1.45; }

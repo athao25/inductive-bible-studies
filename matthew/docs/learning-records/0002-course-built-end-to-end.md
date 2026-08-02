@@ -1,0 +1,7 @@
+# Full course built: 79 lessons, Matthew 1-28, standalone from the method up
+
+The Matthew course was pivoted to standalone (no assumed prior study track) and then built out completely in one pass: lesson 0001 teaches the inductive method from zero, 0002 gives the aerial view, 0003-0078 walk the text passage by passage, and 0079 is a whole-book capstone. All ten memory verses activate on schedule and all five eschatology forks are argued from the text with the postmillennial home lens stated plainly alongside fair statements of the futurist and amillennial readings.
+
+Because the whole curriculum was generated before the learner has worked through it, the zone-of-proximal-development calibration is a projection rather than an observation. That is a real limitation and should be corrected against actual experience.
+
+**Implications**: As the learner works through the lessons, watch for (1) lessons that run long against the 20-30 minute target, especially 0013, 0051, 0052, and 0064, which carry heavy fork or pastoral material; (2) recall quizzes whose questions were written from the curriculum map rather than from the neighboring lesson's actual wording, since the lessons were authored in parallel; (3) whether the observation-check sections are pitched at the right level once the learner is actually producing unaided observation lists. Revise individual lessons in place as feedback arrives; the curriculum map in CURRICULUM.md is the source of truth for numbering and should be updated alongside any restructuring.
