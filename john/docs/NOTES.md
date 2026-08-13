@@ -23,8 +23,8 @@
 - This is a standalone course. It assumes no prior study track and reteaches the inductive method from zero in lesson 0001, with John 20:30-31 as the practice text.
 
 ## Pacing ledger
-- STATUS 2026-08-13: course scaffolded and Unit 1 built (lessons 0001-0008, John 1-2), deployed with all four reference pages. Next lesson to write: 0009 (John 3:1-15, born again).
-- Full course plan: 60 lessons across 8 units; see CURRICULUM.md for the complete lesson-by-lesson map.
+- STATUS 2026-08-13: COURSE COMPLETE. All 60 lessons written (0001-0060), covering all 21 chapters, all 8 units, all 10 memory verses, and all 5 doctrine checkpoints. Verified: course.js matches disk, every internal link and glossary/memory-verse anchor resolves, lesson-nav chain unbroken 0001 to 0060, no em dashes, inline quiz scripts pass `node --check`.
+- Full course plan: 60 lessons across 8 units; see CURRICULUM.md for the complete lesson-by-lesson map. Built exactly to that map with no deviations in slugs or passage divisions.
 - Unit 1 (ch. 1-2): 0001-0008. Orientation is 0001 (how to study Scripture) and 0002 (big picture of John); exposition starts at 0003. Unit 2 (ch. 3-4): 0009-0015. Unit 3 (ch. 5-6): 0016-0023. Unit 4 (ch. 7-8): 0024-0030. Unit 5 (ch. 9-10): 0031-0035. Unit 6 (ch. 11-12): 0036-0042. Unit 7 (ch. 13-17): 0043-0051. Unit 8 (ch. 18-21): 0052-0060.
 - Each unit closes with a recap lesson (0008, 0015, 0023, 0030, 0035, 0042, 0051) and the course closes with a capstone (0060).
 - Memory verse activation points: v1 (1:14) in 0002, v2 (3:16) in 0010, v3 (6:35) in 0020, v4 (8:12) in 0027, v5 (10:27-28) in 0033, v6 (11:25-26) in 0037, v7 (14:6) in 0045, v8 (15:5) in 0047, v9 (16:33) in 0049, v10 (20:30-31) in 0057.

@@ -7,7 +7,7 @@ Verse-by-verse inductive study courses, published as a static site on GitHub Pag
 | --- | --- | --- |
 | [Matthew](matthew/) | 79 | Complete, all 28 chapters |
 | [Isaiah](isaiah/) | 51 | In progress, through Isaiah 40:11 |
-| [John](john/) | 8 | In progress, through John 2 |
+| [John](john/) | 60 | Complete, all 21 chapters |
 
 ## Layout
 
