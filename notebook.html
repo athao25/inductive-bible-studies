@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Notebook · Inductive Bible Studies</title>
+<link rel="stylesheet" href="assets/course.css">
+<link rel="icon" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#7a2e2e">
+<script>
+/* Each course.js assigns window.COURSE; collect them all instead of overwriting. */
+window.COURSES = [];
+Object.defineProperty(window, 'COURSE', {
+  configurable: true,
+  get: function () { return this._course; },
+  set: function (c) { this._course = c; window.COURSES.push(c); }
+});
+</script>
+<script src="matthew/course.js" defer></script>
+<script src="john/course.js" defer></script>
+<script src="isaiah/course.js" defer></script>
+<script src="assets/notebook.js" defer></script>
+</head>
+<body class="notebook-page">
+<div id="notebook"></div>
+<noscript>
+  <main>
+    <h1>My Notebook</h1>
+    <p>Your notes are stored in this browser and compiled here with JavaScript. Enable it to read them.</p>
+  </main>
+</noscript>
+</body>
+</html>

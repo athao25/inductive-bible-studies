@@ -13,9 +13,12 @@ Verse-by-verse inductive study courses, published as a static site on GitHub Pag
 
 ```
 index.html                 hub, links to each course
+notebook.html              My Notebook: every note, compiled per course
 assets/                    shared across every course
   course.css               all styling
   nav.js                   sidebar + progress, reads window.COURSE
+  notes.js                 per-lesson notebook (observation/interpretation/application)
+  notebook.js              powers notebook.html
   quiz.js                  recall quiz widget
   icons/<course>/          per-course icon art
 <course>/
@@ -60,6 +63,44 @@ gitignored and never reaches the public site. The files stay on local disk only.
 
 Lesson completion is stored in `localStorage` under `<course-key>-study-progress`, per browser and
 per course. It is not synced anywhere.
+
+## Notes
+
+Every lesson page carries a notebook panel (`assets/notes.js`), injected before the "Observation
+check" heading so you write before you read the answers. Three stages mirror the method:
+observation and interpretation take verse-stamped lines (Enter starts the next one), application
+takes God / Me / Do. Selecting any line in the lesson offers "Clip to notes", which drops the text
+into observation with the reference attached. It autosaves; `⌘↵` saves and marks the lesson
+complete. On screens from 1400px the panel sits as a sticky right-hand column, otherwise inline.
+
+Notes live in `localStorage` under `<course-key>-study-notes`, keyed by lesson filename:
+
+```
+{ "0003-john-1-1-18-the-word-made-flesh.html": {
+    "o": [{ "r": "v.14", "t": "tabernacled = pitched his tent" }],
+    "i": [], "a": { "god": "", "me": "", "do": "" }, "u": 1755100000000 } }
+```
+
+Same as progress: per browser, per course, never synced. Print the lesson and the notebook prints
+with it.
+
+## My Notebook
+
+`notebook.html` compiles everything you have written, one notebook per course. It loads all three
+`course.js` files (each assigns `window.COURSE`; the page collects them into `window.COURSES`) and
+reads the same `localStorage` keys. It is read-only: editing happens in the lesson.
+
+Three views:
+
+- **By lesson** — a journal, newest notes grouped under the lesson that produced them.
+- **By stage** — all your observations in one column, interpretations in the next, applications in
+  the third.
+- **Highlights** — lines you clipped from the passage, shown as the passage text with your edit
+  underneath as a note.
+
+The rail switches course, filters by stage, and offers print, Markdown export, and a JSON backup.
+Print and the stage filter act on what is on screen; Markdown and the JSON backup always write
+everything (the backup covers all courses).
 
 ## History
 

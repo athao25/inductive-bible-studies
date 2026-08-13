@@ -94,6 +94,7 @@
       '  <div class="nav-count"></div>' +
       '  <div class="nav-bar"><div class="nav-bar-fill"></div></div>' +
       '  <label class="nav-hide-done"><input type="checkbox"> Hide completed</label>' +
+      '  <a class="nav-note" href="' + homePrefix + 'notebook.html">My notebook →</a>' +
       '</div>' +
       '<div class="nav-section">Lessons</div>' +
       '<ul class="nav-lessons"></ul>' +
