@@ -138,7 +138,12 @@
 
     [ref, text].forEach(function (el) {
       el.addEventListener('input', function () {
-        if (el === text) grow(text);
+        if (el === text) {
+          grow(text);
+          // Emptying a clipped line detaches it from the passage it came from,
+          // so the row can be reused without dragging the old highlight along.
+          if (!text.value.trim()) delete row.dataset.h;
+        }
         ensureBlank(stage);
         queueSave();
       });
@@ -260,7 +265,10 @@
     main.insertBefore(panel, anchor);
     document.body.classList.add('has-notebook');
 
-    panel.querySelectorAll('.nb-text').forEach(grow);
+    function growAll() { panel.querySelectorAll('.nb-text').forEach(grow); }
+    growAll();
+    // Lines rewrap when the column changes width, so re-fit their height.
+    window.addEventListener('resize', growAll);
     stamp();
     setInterval(stamp, 30000);
 
@@ -297,7 +305,7 @@
       return vm ? 'v.' + vm[1] : '';
     }
 
-    document.addEventListener('mouseup', function () {
+    function offer() {
       setTimeout(function () {
         var sel = window.getSelection();
         var text = sel ? String(sel).trim() : '';
@@ -307,16 +315,26 @@
         var el = host.nodeType === 1 ? host : host.parentNode;
         if (!main.contains(el) || panel.contains(el)) { btn.hidden = true; return; }
         pending = { t: text.replace(/\s+/g, ' '), r: refFor(host) };
-        var box = range.getBoundingClientRect();
+        // Range rects are the precise anchor; fall back to the element's own box
+        // where they are unavailable, so the button still appears.
+        var box = typeof range.getBoundingClientRect === 'function'
+          ? range.getBoundingClientRect()
+          : el.getBoundingClientRect();
         btn.style.top = (box.bottom + window.scrollY + 6) + 'px';
         btn.style.left = (box.left + window.scrollX) + 'px';
         btn.hidden = false;
       }, 0);
-    });
+    }
 
-    document.addEventListener('mousedown', function (e) {
+    // touchend as well as mouseup: on a phone the selection is made by touch.
+    document.addEventListener('mouseup', offer);
+    document.addEventListener('touchend', offer);
+
+    function dismiss(e) {
       if (e.target !== btn) btn.hidden = true;
-    });
+    }
+    document.addEventListener('mousedown', dismiss);
+    document.addEventListener('touchstart', dismiss);
 
     btn.addEventListener('click', function () {
       if (!pending) return;

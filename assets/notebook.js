@@ -66,11 +66,13 @@
       lesson.title.toLowerCase().indexOf(q) !== -1;
   }
 
-  /* Apply the stage filter and the search box. */
-  function filtered(lessons) {
+  /* Apply the search box, and the stage filter unless told to skip it.
+     Highlights are stored as observations, so that view ignores the stage
+     filter — otherwise unchecking Observation would empty it. */
+  function filtered(lessons, applyStages) {
     return lessons.map(function (l) {
       var groups = l.groups
-        .filter(function (g) { return state.stages[g.stage]; })
+        .filter(function (g) { return applyStages === false || state.stages[g.stage]; })
         .map(function (g) {
           return { stage: g.stage, lines: g.lines.filter(function (x) { return matches(x, l); }) };
         })
@@ -388,12 +390,12 @@
       go.href = course.key + '/lessons/' + course.lessons[0].f;
       empty.appendChild(go);
       pane.appendChild(empty);
+    } else if (state.view === 'marks') {
+      pane.appendChild(viewMarks(filtered(all, false)));
     } else if (!shown.length) {
       pane.appendChild(el('div', 'nbk-empty', 'No notes match that filter.'));
     } else if (state.view === 'stage') {
       pane.appendChild(viewStage(shown));
-    } else if (state.view === 'marks') {
-      pane.appendChild(viewMarks(shown));
     } else {
       pane.appendChild(viewLesson(shown));
     }
@@ -408,7 +410,7 @@
   }
 
   document.addEventListener('keydown', function (e) {
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+    if ((e.metaKey || e.ctrlKey) && e.key && e.key.toLowerCase() === 'k') {
       e.preventDefault();
       var s = root.querySelector('.nbk-search');
       if (s) s.focus();

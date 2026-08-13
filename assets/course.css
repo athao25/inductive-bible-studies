@@ -1,12 +1,20 @@
-/* Shared course stylesheet. Linked by every page: hub, course index, lesson, reference. */
+/* Shared course stylesheet. Linked by every page: hub, course index, lesson, reference.
+ * One theme only: the warm paper light palette of the redesign, held regardless of
+ * the OS colour scheme. Newsreader falls back to Georgia when the webfont cannot
+ * load, so the site still reads offline. */
+
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&display=swap');
 
 :root {
-  --bg: #fdfcf8;
+  color-scheme: light;   /* keep native controls and scrollbars light too */
+  --bg: #fbf9f4;
   --ink: #22201c;
-  --ink-soft: #5c574d;
+  --ink-soft: #6b6459;
+  --ink-faint: #8a8375;
   --accent: #7a2e2e;      /* deep red, used sparingly */
   --accent-soft: #a9563f;
-  --rule: #d8d3c6;
+  --rule: #e2ddd1;
+  --rule-soft: #eae5d9;
   --card: #f5f2ea;
   --scripture-bg: #f7f4ec;
   --good: #2e6b3f;
@@ -15,30 +23,13 @@
   --mark-line: #dcc79f;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1c1a17;
-    --ink: #e8e4da;
-    --ink-soft: #a89f8f;
-    --accent: #d98b6a;
-    --accent-soft: #c07a5e;
-    --rule: #3b372f;
-    --card: #26231e;
-    --scripture-bg: #242119;
-    --good: #7fbf90;
-    --bad: #d98a8a;
-    --mark: #4a3c22;
-    --mark-line: #6d5a33;
-  }
-}
-
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font-family: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  font-family: 'Newsreader', Georgia, 'Iowan Old Style', 'Times New Roman', serif;
   font-size: 1.06rem;
   line-height: 1.65;
 }
@@ -54,7 +45,7 @@ h1, h2, h3 {
   line-height: 1.25;
   letter-spacing: -0.01em;
 }
-h1 { font-size: 1.9rem; margin: 0.2rem 0 0.4rem; }
+h1 { font-size: 1.9rem; margin: 0.2rem 0 0.4rem; letter-spacing: -0.015em; }
 h2 { font-size: 1.35rem; margin-top: 2.4rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.3rem; }
 h3 { font-size: 1.1rem; margin-top: 1.8rem; }
 
@@ -424,10 +415,12 @@ button.mark-complete.is-done {
   color: var(--ink);
   background: transparent;
   border: none;
-  border-bottom: 1px dashed var(--rule);
+  border-bottom: 1px solid var(--rule-soft);
 }
+/* A written line is ruled solid; an open one stays dashed, like a blank page. */
+.notebook .nb-text:placeholder-shown { border-bottom-style: dashed; border-bottom-color: var(--rule); }
 .notebook .nb-text:focus { outline: none; border-bottom: 1px solid var(--accent-soft); }
-.notebook .nb-text::placeholder { color: var(--ink-soft); opacity: 0.6; }
+.notebook .nb-text::placeholder { color: var(--ink-faint); opacity: 0.7; }
 
 .notebook .nb-foot {
   display: flex;
@@ -480,7 +473,9 @@ button.mark-complete.is-done {
   body.has-notebook main > * { grid-column: 1; }
   body.has-notebook main > .notebook {
     grid-column: 2;
-    grid-row: 1 / -1;
+    /* Rows here are implicit, so `-1` resolves back to line 1 and row 1 would
+       stretch to the panel's height. Span past the content instead. */
+    grid-row: 1 / span 500;
     align-self: start;
     position: sticky;
     top: 1.5rem;
@@ -494,7 +489,17 @@ button.mark-complete.is-done {
   body.has-sidenav { padding-left: 0; }
   .sidenav { transform: translateX(-100%); transition: transform 0.2s ease; }
   .sidenav.open { transform: none; box-shadow: 0 0 30px rgba(0,0,0,0.35); }
-  .nav-burger { display: block; }
+  /* Bottom-right, out of the reading path: at top-left it sat over the first
+     line of whatever had scrolled under it, including panel headings. */
+  .nav-burger {
+    display: block;
+    top: auto;
+    left: auto;
+    bottom: 1rem;
+    right: 1rem;
+    padding: 0.55rem 0.7rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  }
 }
 
 @media print {

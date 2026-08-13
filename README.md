@@ -15,7 +15,7 @@ Verse-by-verse inductive study courses, published as a static site on GitHub Pag
 index.html                 hub, links to each course
 notebook.html              My Notebook: every note, compiled per course
 assets/                    shared across every course
-  course.css               all styling
+  course.css               all styling; one light theme, warm paper + Newsreader
   nav.js                   sidebar + progress, reads window.COURSE
   notes.js                 per-lesson notebook (observation/interpretation/application)
   notebook.js              powers notebook.html
