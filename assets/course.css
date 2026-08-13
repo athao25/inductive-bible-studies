@@ -359,3 +359,52 @@ button.mark-complete.is-done {
 }
 .study-card .study-meta { color: var(--ink-soft); font-size: 0.9rem; margin-top: 0.15rem; }
 .study-card .study-blurb { margin-top: 0.5rem; line-height: 1.45; }
+
+/* Hub landing page: the whole canon, one tile per book. */
+.book-legend { margin-top: 2.2rem; }
+.book-group { margin-top: 1.4rem; }
+.book-group h3 {
+  font-family: 'Gill Sans', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--ink-soft);
+  margin: 0 0 0.55rem;
+}
+.book-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+  gap: 0.5rem;
+}
+.book {
+  display: block;
+  padding: 0.5rem 0.7rem;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--rule);
+  border-radius: 5px;
+  text-decoration: none;
+  color: inherit;
+}
+.book .book-name {
+  display: block;
+  font-family: 'Gill Sans', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.book .book-status {
+  display: block;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+  margin-top: 0.1rem;
+}
+.book.pending { opacity: 0.72; }
+a.book { border-left-color: var(--accent); }
+a.book:hover { border-color: var(--accent); color: inherit; }
+a.book .book-name { color: var(--accent); }
+a.book.done { border-left-color: var(--good); }
+a.book.done:hover { border-color: var(--good); }
+a.book.done .book-status { color: var(--good); }
