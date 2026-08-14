@@ -15,7 +15,8 @@ Verse-by-verse inductive study courses, published as a static site on GitHub Pag
 index.html                 hub, links to each course
 notebook.html              My Notebook: every note, compiled per course
 assets/                    shared across every course
-  course.css               all styling; one light theme, warm paper + Newsreader
+  course.css               all styling; warm paper light + dark palettes, Newsreader
+  theme.js                 light/dark toggle, saved in localStorage
   nav.js                   sidebar + progress, reads window.COURSE
   notes.js                 per-lesson notebook (observation/interpretation/application)
   notebook.js              powers notebook.html
@@ -63,6 +64,13 @@ gitignored and never reaches the public site. The files stay on local disk only.
 
 Lesson completion is stored in `localStorage` under `<course-key>-study-progress`, per browser and
 per course. It is not synced anywhere.
+
+## Theme
+
+Every page has a light/dark toggle (the round button at the bottom right, injected by
+`assets/theme.js`). The choice is stored in `localStorage` under `study-theme` and applied before
+first paint via `html[data-theme="dark"]`; light is the default and printing always uses the light
+palette. The OS colour scheme is ignored either way.
 
 ## Notes
 

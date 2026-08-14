@@ -1,7 +1,8 @@
 /* Shared course stylesheet. Linked by every page: hub, course index, lesson, reference.
- * One theme only: the warm paper light palette of the redesign, held regardless of
- * the OS colour scheme. Newsreader falls back to Georgia when the webfont cannot
- * load, so the site still reads offline. */
+ * Two themes: the warm paper light palette (the default, held regardless of the OS
+ * colour scheme) and a warm dark palette applied when html[data-theme="dark"] is set
+ * by assets/theme.js from the visitor's saved choice. Newsreader falls back to
+ * Georgia when the webfont cannot load, so the site still reads offline. */
 
 @import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&display=swap');
 
@@ -21,6 +22,26 @@
   --bad: #8a2f2f;
   --mark: #f2e3c9;
   --mark-line: #dcc79f;
+}
+
+/* Dark: the same warm paper, after sundown. Every colour below shadows a light
+ * variable above, so the rest of the sheet needs no per-theme rules. */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #1b1916;
+  --ink: #e7e2d6;
+  --ink-soft: #a49b8b;
+  --ink-faint: #857c6d;
+  --accent: #d08a76;
+  --accent-soft: #c68e67;
+  --rule: #3b372f;
+  --rule-soft: #322e27;
+  --card: #24211b;
+  --scripture-bg: #221f1a;
+  --good: #7bb389;
+  --bad: #c96f6f;
+  --mark: #453a20;
+  --mark-line: #6d5c33;
 }
 
 * { box-sizing: border-box; }
@@ -285,6 +306,25 @@ body.has-sidenav { padding-left: 250px; }
   border-color: var(--good);
 }
 
+/* Light/dark switch (injected by theme.js) */
+.theme-toggle {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 30;
+  width: 2.4rem;
+  height: 2.4rem;
+  font-size: 1.05rem;
+  line-height: 1;
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+}
+.theme-toggle:hover { border-color: var(--accent-soft); }
+
 .nav-burger {
   display: none;
   position: fixed;
@@ -500,13 +540,33 @@ button.mark-complete.is-done {
     padding: 0.55rem 0.7rem;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
   }
+  /* The burger takes the bottom-right corner here; stack the switch above it. */
+  body.has-sidenav .theme-toggle { bottom: 4.3rem; }
 }
 
 @media print {
+  /* Paper is paper: print in the light palette even when dark is active. */
+  html[data-theme="dark"] {
+    color-scheme: light;
+    --bg: #fbf9f4;
+    --ink: #22201c;
+    --ink-soft: #6b6459;
+    --ink-faint: #8a8375;
+    --accent: #7a2e2e;
+    --accent-soft: #a9563f;
+    --rule: #e2ddd1;
+    --rule-soft: #eae5d9;
+    --card: #f5f2ea;
+    --scripture-bg: #f7f4ec;
+    --good: #2e6b3f;
+    --bad: #8a2f2f;
+    --mark: #f2e3c9;
+    --mark-line: #dcc79f;
+  }
   body { background: #fff; color: #000; font-size: 11pt; }
   .quiz button.opt { border: 1px solid #999; }
   a { color: #000; }
-  .sidenav, .nav-burger, button.mark-complete { display: none; }
+  .sidenav, .nav-burger, .theme-toggle, button.mark-complete { display: none; }
   body.has-sidenav { padding-left: 0; }
   /* The notebook is the thing you would actually print. */
   .nb-clip, .notebook .nb-foot { display: none; }
