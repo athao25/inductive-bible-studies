@@ -13,8 +13,10 @@
  *     quiz[] = { course, file, score, total, at }
  *   }
  *
- * Lesson notes stay in the pre-existing '<course>-study-notes' keys written by
- * assets/notes.js, so notebooks written before the redesign survive it.
+ * Lesson notes are per account too: assets/notes.js writes them under
+ * 'ibs-notes/<email>/<course>' via Store.notesKey(). The pre-redesign
+ * '<course>-study-notes' keys are imported into the first account that signs in
+ * on this browser, so notebooks written before the redesign survive it.
  * Include before every other LMS script.
  */
 window.Store = (function () {
@@ -58,7 +60,14 @@ window.Store = (function () {
 
   function norm(email) { return String(email || '').trim().toLowerCase(); }
 
-  /* One-off import of the pre-redesign per-course progress keys. */
+  /* Where one course's notes live for one account. Signed out (or before an
+     account exists) this is the pre-redesign key, so notes.js still works. */
+  function notesKeyFor(email, course) {
+    return email ? 'ibs-notes/' + email + '/' + course : course + '-study-notes';
+  }
+
+  /* One-off import of the pre-redesign per-course progress and notes keys into
+     the first account that claims them on this browser. */
   function migrate(d, email) {
     var courses = window.COURSES ? Object.keys(window.COURSES) : [];
     var bucket = d.data[email];
@@ -66,13 +75,25 @@ window.Store = (function () {
     courses.forEach(function (key) {
       var old = null;
       try { old = JSON.parse(localStorage.getItem(key + '-study-progress')); } catch (e) { /* ignore */ }
-      if (!old) return;
-      Object.keys(old).forEach(function (file) {
-        if (!old[file]) return;
-        var id = key + '/' + file;
-        if (bucket.progress[id]) return;
-        bucket.progress[id] = { section: '', updated: 0, completed: 1 };
+      if (old) {
+        Object.keys(old).forEach(function (file) {
+          if (!old[file]) return;
+          var id = key + '/' + file;
+          if (bucket.progress[id]) return;
+          bucket.progress[id] = { section: '', updated: 0, completed: 1 };
+        });
+      }
+
+      var oldNotes = null;
+      try { oldNotes = JSON.parse(localStorage.getItem(key + '-study-notes')); } catch (e) { /* ignore */ }
+      if (!oldNotes || !Object.keys(oldNotes).length) return;
+      var target = notesKeyFor(email, key);
+      var mine = {};
+      try { mine = JSON.parse(localStorage.getItem(target)) || {}; } catch (e) { /* ignore */ }
+      Object.keys(oldNotes).forEach(function (file) {
+        if (!mine[file]) mine[file] = oldNotes[file];
       });
+      try { localStorage.setItem(target, JSON.stringify(mine)); } catch (e) { /* private mode etc. */ }
     });
     bucket.migrated = 1;
   }
@@ -156,6 +177,17 @@ window.Store = (function () {
         delete d.users[cur];
         delete d.data[cur];
         d.session = next;
+        // Notes are keyed by email, so they move with the account.
+        Object.keys(window.COURSES || {}).forEach(function (key) {
+          var from = notesKeyFor(cur, key);
+          var body = null;
+          try { body = localStorage.getItem(from); } catch (e) { /* ignore */ }
+          if (!body) return;
+          try {
+            localStorage.setItem(notesKeyFor(next, key), body);
+            localStorage.removeItem(from);
+          } catch (e) { /* private mode etc. */ }
+        });
       }
       d.users[d.session].name = (name || '').trim() || d.users[d.session].name;
       write(d);
@@ -273,13 +305,16 @@ window.Store = (function () {
 
     /* Notes -------------------------------------------------------------- */
 
+    /* Storage key holding one course's notes for the signed-in account. */
+    notesKey: function (course) { return notesKeyFor(doc().session, course); },
+
     /* Flattens the per-course notes written by assets/notes.js into notebook rows. */
     notes: function () {
       var out = [];
       var courses = window.COURSES || {};
       Object.keys(courses).forEach(function (key) {
         var all = {};
-        try { all = JSON.parse(localStorage.getItem(key + '-study-notes')) || {}; } catch (e) { /* ignore */ }
+        try { all = JSON.parse(localStorage.getItem(api.notesKey(key))) || {}; } catch (e) { /* ignore */ }
         var course = courses[key];
         Object.keys(all).forEach(function (file) {
           var lesson = course.lessons.find(function (l) { return l.f === file; });

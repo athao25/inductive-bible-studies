@@ -4,7 +4,7 @@
  *   <script src="../../assets/shell.js" defer></script>
  *   <script src="../../assets/notes.js" defer></script>
  * Only builds on lesson pages. Notes live in localStorage under
- * '<course.key>-study-notes' as { '<lesson-file>': { o, i, a, u } }:
+ * 'ibs-notes/<email>/<course.key>' as { '<lesson-file>': { o, i, a, u } }:
  *   o / i  observation + interpretation lines, [{ r: 'v.14', t: 'text', h: 'clipped' }]
  *          h is present only on clipped lines: the passage text as selected, kept
  *          so the notebook can show it as a highlight even after the line is edited
@@ -24,7 +24,11 @@
   var main = document.querySelector('main');
   if (!main) return;
 
-  var KEY = COURSE.key + '-study-notes';
+  /* Per account when signed in ('ibs-notes/<email>/<course>'), otherwise the
+     pre-redesign key. Read lazily: the account can change under a long session. */
+  function key() {
+    return window.Store ? Store.notesKey(COURSE.key) : COURSE.key + '-study-notes';
+  }
   var STAGES = [
     { k: 'o', label: 'Observation', gloss: 'what it says', cls: 'obs', add: 'add an observation' },
     { k: 'i', label: 'Interpretation', gloss: 'what it means', cls: 'int', add: 'add an interpretation' }
@@ -36,7 +40,7 @@
   ];
 
   function loadAll() {
-    try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; }
+    try { return JSON.parse(localStorage.getItem(key())) || {}; } catch (e) { return {}; }
   }
   function lesson() {
     var all = loadAll();
@@ -76,7 +80,7 @@
     var data = collect();
     var all = loadAll();
     all[here] = data;
-    try { localStorage.setItem(KEY, JSON.stringify(all)); } catch (e) { /* private mode etc. */ }
+    try { localStorage.setItem(key(), JSON.stringify(all)); } catch (e) { /* private mode etc. */ }
     lastSaved = data.u;
     stamp();
   }

@@ -99,7 +99,7 @@ window.Page = function (ctx) {
     ['Backup JSON', function () {
       var dump = {};
       Object.keys(window.COURSES).forEach(function (key) {
-        try { dump[key] = JSON.parse(localStorage.getItem(key + '-study-notes')) || {}; } catch (e) { dump[key] = {}; }
+        try { dump[key] = JSON.parse(localStorage.getItem(Store.notesKey(key))) || {}; } catch (e) { dump[key] = {}; }
       });
       download('notebook-backup.json', JSON.stringify(dump, null, 2), 'application/json');
     }],

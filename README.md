@@ -23,7 +23,8 @@ the lesson quiz into a grade history, keep a notebook, and pin a favourite verse
 The redesign handoff specified Node + Express + SQLite. GitHub Pages serves static files only, so
 the same data model runs client-side: `assets/store.js` keeps one `localStorage` document
 (`ibs-lms-v1`) shaped like the handoff's tables — users, session, lesson_progress, quiz_attempts,
-favourite verse, dark mode. Accounts are per browser and nothing is sent anywhere; the password is
+favourite verse, dark mode — with each account's notes alongside it under
+`ibs-notes/<email>/<course>`. Accounts are per browser and nothing is sent anywhere; the password is
 only obscured, not protected, and the sign-in screen says so.
 
 Screens:
@@ -108,12 +109,12 @@ gitignored and never reaches the public site. The files stay on local disk only.
 | Key | What |
 | --- | --- |
 | `ibs-lms-v1` | accounts, session, progress, quiz attempts, favourite verse, dark mode |
-| `<course>-study-notes` | lesson notes, written by `assets/notes.js` |
+| `ibs-notes/<email>/<course>` | lesson notes for one account, written by `assets/notes.js` |
 | `study-theme` | `light` / `dark`, applied before first paint |
-| `<course>-study-progress` | pre-redesign progress; imported once on first sign-in |
+| `<course>-study-progress`, `<course>-study-notes` | pre-redesign progress and notes; imported once into the first account that signs in |
 
-Notes stay in the pre-redesign keys, so notebooks written before the redesign survive it. They are
-per browser rather than per account.
+Progress, quiz history and notes are all per account. Renaming an account's email moves its notes
+with it. Everything stays on the browser that wrote it; nothing is synced.
 
 ## Theme
 

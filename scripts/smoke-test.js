@@ -119,8 +119,27 @@ async function load(rel) {
   ok(set.win.Store.state().favRef === 'John 6:35', 'favourite verse persisted');
   ok(!set.errors.length, 'settings has no script errors' + (set.errors[0] ? ': ' + set.errors[0] : ''));
 
+  // Notes are per account -----------------------------------------------
+  const noteDoc = { '0020-john-6-22-40-the-bread-of-life.html': { o: [{ r: 'v.35', t: 'bread = person' }], i: [], a: {}, u: Date.now() } };
+  storage.setItem(set.win.Store.notesKey('john'), JSON.stringify(noteDoc));
+  ok(set.win.Store.notesKey('john') === 'ibs-notes/andrew@example.com/john', 'notes key is namespaced by account');
+  ok(set.win.Store.notes().length === 1, 'the signed-in account sees its own note');
+
+  set.win.Store.signOut();
+  set.win.Store.signUp('beth@example.com', 'Beth', 'pw2');
+  ok(set.win.Store.notes().length === 0, "a second account does not see the first account's notes");
+  set.win.Store.signOut();
+  set.win.Store.signIn('andrew@example.com', 'pw');
+  ok(set.win.Store.notes().length === 1, 'notes come back when the first account signs in again');
+
+  // Renaming the account carries its notes across
+  set.win.Store.setProfile('Andrew', 'drew@example.com');
+  ok(set.win.Store.notesKey('john') === 'ibs-notes/drew@example.com/john', 'renaming the account moves the notes key');
+  ok(set.win.Store.notes().length === 1, 'notes survive an email change');
+
   // Signed-out guard
   set.win.Store.signOut();
+  ok(!set.win.Store.signedIn(), 'sign out clears the session');
   const guarded = await load('index.html');
   ok(!guarded.doc.querySelector('.lms-sidebar'), 'signed-out dashboard does not render the shell');
 
