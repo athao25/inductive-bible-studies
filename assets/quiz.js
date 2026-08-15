@@ -20,6 +20,19 @@ window.Quiz = (function () {
   function render(containerId, questions) {
     var root = document.getElementById(containerId);
     if (!root) return;
+    var answered = 0, score = 0;
+
+    /* When every question in the container has been answered once, announce the
+       attempt so assets/lesson.js can save it to the grade history. */
+    function tally(right) {
+      answered++;
+      if (right) score++;
+      if (answered !== questions.length) return;
+      document.dispatchEvent(new CustomEvent('quiz:complete', {
+        detail: { id: containerId, score: score, total: questions.length }
+      }));
+    }
+
     questions.forEach(function (q, qi) {
       var box = document.createElement('div');
       box.className = 'q';
@@ -45,6 +58,7 @@ window.Quiz = (function () {
           if (oi !== q.answer) btn.classList.add('wrong');
           feedback.textContent = (oi === q.answer ? 'Correct. ' : 'Not quite. ') + (q.why || '');
           feedback.classList.add('shown');
+          tally(oi === q.answer);
         });
         box.appendChild(btn);
       });

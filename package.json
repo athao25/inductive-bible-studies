@@ -1,0 +1,14 @@
+{
+  "name": "inductive-bible-studies",
+  "private": true,
+  "description": "Static LMS for verse-by-verse inductive Bible study courses.",
+  "scripts": {
+    "build:data": "node scripts/build-course-data.js",
+    "retrofit": "node scripts/retrofit-pages.js",
+    "test": "node scripts/smoke-test.js",
+    "serve": "python3 -m http.server 8000"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1"
+  }
+}

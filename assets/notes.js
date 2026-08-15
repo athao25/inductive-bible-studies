@@ -1,7 +1,7 @@
 /* Per-lesson notebook: observation / interpretation / application.
  * Course-agnostic. Reads window.COURSE, so include course.js first:
  *   <script src="../course.js" defer></script>
- *   <script src="../../assets/nav.js" defer></script>
+ *   <script src="../../assets/shell.js" defer></script>
  *   <script src="../../assets/notes.js" defer></script>
  * Only builds on lesson pages. Notes live in localStorage under
  * '<course.key>-study-notes' as { '<lesson-file>': { o, i, a, u } }:
@@ -185,8 +185,8 @@
   }
 
   function markComplete() {
-    var btn = document.querySelector('button.mark-complete');
-    if (btn && !btn.classList.contains('is-done')) btn.click();
+    var btn = document.querySelector('button.complete-toggle');
+    if (btn && !btn.classList.contains('done')) btn.click();
   }
 
   function build() {

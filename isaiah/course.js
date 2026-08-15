@@ -1,4 +1,4 @@
-/* Course data for the Isaiah study. Consumed by the shared assets/nav.js.
+/* Course data for the Isaiah study. Consumed by the shared assets/shell.js and scripts/build-course-data.js.
  * Add a lesson: one entry in lessons below. Nothing else. */
 window.COURSE = {
   key: 'isaiah',

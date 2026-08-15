@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Account settings · Inductive Bible Studies</title>
+<link rel="stylesheet" href="assets/lms.css">
+<script src="assets/theme.js"></script>
+<link rel="icon" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#7a2e2e">
+<script src="assets/data/courses.js" defer></script>
+<script src="assets/store.js" defer></script>
+<script src="assets/ui.js" defer></script>
+<script src="assets/settings.js" defer></script>
+<script src="assets/shell.js" defer></script>
+</head>
+<body data-nav="settings">
+<main>
+  <div class="settings-wrap">
+    <h1 class="page-h1">Account settings</h1>
+    <div class="page-sub">Saved to your account on this browser</div>
+
+    <section class="settings-card">
+      <h2>Favorite verse</h2>
+      <div class="settings-hint">Shown as a banner on your dashboard.</div>
+      <label class="field">Reference
+        <input id="fav-ref-input" type="text" placeholder="e.g. John 6:35">
+      </label>
+      <label class="field">Verse text
+        <textarea id="fav-text-input" rows="3"></textarea>
+      </label>
+      <div class="settings-actions">
+        <button class="btn" id="fav-save" type="button">Save</button>
+        <span class="form-ok" id="fav-saved"></span>
+      </div>
+    </section>
+
+    <section class="settings-card">
+      <h2>Profile</h2>
+      <label class="field">Display name
+        <input id="profile-name" type="text">
+      </label>
+      <label class="field">Email
+        <input id="profile-email" type="email">
+      </label>
+      <div class="settings-actions">
+        <button class="btn" id="profile-save" type="button">Save</button>
+        <span id="profile-msg"></span>
+      </div>
+    </section>
+  </div>
+</main>
+</body>
+</html>

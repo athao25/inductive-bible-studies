@@ -4,27 +4,32 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Isaiah, Verse by Verse · Inductive Bible Studies</title>
-<link rel="stylesheet" href="../assets/course.css">
+<link rel="stylesheet" href="../assets/lms.css">
 <script src="../assets/theme.js"></script>
 <link rel="icon" href="../assets/icons/isaiah/favicon.png">
 <link rel="apple-touch-icon" href="../assets/icons/isaiah/icon-180.png">
 <link rel="manifest" href="../manifest.webmanifest">
 <meta name="theme-color" content="#7a2e2e">
-<script src="course.js" defer></script>
-<script src="../assets/nav.js" defer></script>
+<script src="../assets/data/courses.js" defer></script>
+<script src="../assets/store.js" defer></script>
+<script src="../assets/ui.js" defer></script>
+<script src="../assets/course-page.js" defer></script>
+<script src="../assets/shell.js" defer></script>
 </head>
-<body>
+<body data-nav="courses" data-course="isaiah">
 <main>
-  <p class="kicker">Inductive study course</p>
-  <h1>Isaiah, Verse by Verse</h1>
-  <p class="lesson-meta">51 lessons so far · Isaiah 1 through 40:11 · ~30 min each</p>
-
-  <div class="card">
-    <div class="card-title">How this works</div>
-    Every lesson walks one passage with the inductive method: read the passage twice in your ESV first and write your own observations, then work through observation, interpretation, and application, with recall quizzes along the way. Use the sidebar to jump to any lesson or reference page and to mark lessons complete. Progress is saved in this browser only.
+  <a class="crumb" id="all-courses" href="../courses.html">← All courses</a>
+  <div class="course-head">
+    <h1 id="course-title"></h1>
+    <button class="btn btn-sm" id="course-resume" type="button"></button>
   </div>
-
-  <p><a href="lessons/0001-how-to-study-scripture.html"><strong>Start here: Lesson 1 · How to Study Scripture</strong></a></p>
+  <p class="course-epigraph" id="course-epigraph"></p>
+  <div class="course-progress">
+    <div id="course-bar" style="flex:1; max-width:340px;"></div>
+    <span id="course-stats"></span>
+  </div>
+  <div class="ref-links" id="course-refs" style="margin-bottom:26px;"></div>
+  <div class="units" id="units"></div>
 </main>
 </body>
 </html>

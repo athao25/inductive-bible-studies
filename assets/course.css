@@ -188,7 +188,7 @@ th {
 
 .footnote { font-size: 0.88rem; color: var(--ink-soft); }
 
-/* Shared left sidebar (injected by nav.js) */
+/* Legacy per-course sidebar styles; the LMS shell (assets/shell.js) replaced it. */
 .sidenav {
   position: fixed;
   top: 0;
@@ -582,7 +582,7 @@ button.mark-complete.is-done {
   .notebook .nb-text::placeholder, .notebook .nb-ref::placeholder { color: transparent; }
 }
 
-/* My Notebook page (notebook.html + assets/notebook.js) */
+/* Legacy notebook page styles; superseded by assets/lms.css. */
 .notebook-page { font-size: 1rem; }
 .nbk-top {
   display: flex;

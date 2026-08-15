@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in · Inductive Bible Studies</title>
+<link rel="stylesheet" href="assets/lms.css">
+<script src="assets/theme.js"></script>
+<link rel="icon" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#7a2e2e">
+<script src="assets/data/courses.js" defer></script>
+<script src="assets/store.js" defer></script>
+<script src="assets/auth.js" defer></script>
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="auth-col">
+    <div class="auth-head">
+      <div class="auth-mark">ℬ</div>
+      <h1>Inductive Bible Studies</h1>
+      <div class="auth-tag">observation · interpretation · application</div>
+    </div>
+    <form class="auth-card" id="auth-form">
+      <label class="field" id="name-field">Display name
+        <input id="name" type="text" autocomplete="name">
+      </label>
+      <label class="field">Email
+        <input id="email" type="email" autocomplete="email" required>
+      </label>
+      <label class="field">Password
+        <input id="password" type="password" autocomplete="current-password" required>
+      </label>
+      <div class="form-error" id="auth-error"></div>
+      <button class="btn" type="submit" id="auth-action">Sign in</button>
+      <div class="auth-alt" id="auth-alt"></div>
+    </form>
+    <div class="auth-foot">Accounts and progress are stored in this browser. Nothing is sent to a server.</div>
+  </div>
+</div>
+</body>
+</html>
