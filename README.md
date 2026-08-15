@@ -8,6 +8,12 @@ Verse-by-verse inductive study courses, published as a static site on GitHub Pag
 | [Matthew](matthew/) | 79 | Complete, all 28 chapters |
 | [Isaiah](isaiah/) | 51 | In progress, through Isaiah 40:11 |
 | [John](john/) | 60 | Complete, all 21 chapters |
+| [The Trinity](trinity/) | 24 | Complete, doctrine course |
+
+Courses come in two kinds: **book studies** (verse by verse through one book) and **doctrine
+studies** (one doctrine walked through the passages it comes from, same inductive method; the
+Trinity course is the first). Doctrine courses read alongside a companion book, cited with brief
+attributed excerpts only.
 
 ## Layout
 
@@ -94,8 +100,8 @@ with it.
 
 ## My Notebook
 
-`notebook.html` compiles everything you have written, one notebook per course. It loads all three
-`course.js` files (each assigns `window.COURSE`; the page collects them into `window.COURSES`) and
+`notebook.html` compiles everything you have written, one notebook per course. It loads every
+course's `course.js` file (each assigns `window.COURSE`; the page collects them into `window.COURSES`) and
 reads the same `localStorage` keys. It is read-only: editing happens in the lesson.
 
 Three views:
