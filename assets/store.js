@@ -280,9 +280,11 @@ window.Store = (function () {
     },
 
     /* Newest touched-but-unfinished lesson, else the next uncompleted lesson of
-       the most recently touched course, else the first lesson of John. */
+       the most recently touched course. Null until the reader has actually
+       opened something: there is nothing to continue on a new account. */
     resume: function () {
       var courses = window.COURSES || {};
+      if (!Object.keys(progress).length) return null;
       var best = null;
       Object.keys(progress).forEach(function (key) {
         var p = progress[key];

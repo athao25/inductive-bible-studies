@@ -66,6 +66,7 @@ async function load(rel) {
   const res = await signin.win.Store.signUp('andrew@example.com', 'Andrew', 'correct horse battery');
   ok(res.ok === true, 'sign-up creates an account');
   ok(signin.win.Store.signedIn(), 'sign-up leaves the visitor signed in');
+  ok(signin.win.Store.resume() === null, 'a brand-new account has nothing to resume');
   ok(signin.win.Store.user().name === 'Andrew', 'display name comes from the profile row');
   ok(stub._db.profiles.length === 1, 'a profile row is created with the account');
 
@@ -167,6 +168,9 @@ async function load(rel) {
   await set.win.Store.signOut();
   const second = await set.win.Store.signUp('beth@example.com', 'Beth', 'another password');
   ok(second.ok === true, 'a second account can be created');
+  const fresh = await load('index.html');
+  ok(fresh.doc.getElementById('resume').style.display === 'none', 'the resume card is hidden for a new account');
+  ok(!!fresh.doc.querySelector('.fav-banner'), 'the new account still gets the favourite verse banner');
   ok((await set.win.Store.allNotes()).length === 0, "a second account sees none of the first account's notes");
   ok(set.win.Store.quizHistory().length === 0, 'a second account has an empty quiz history');
   ok(set.win.Store.courseStats('john').done === 0, 'a second account starts at zero progress');
