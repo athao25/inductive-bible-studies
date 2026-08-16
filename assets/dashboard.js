@@ -1,6 +1,6 @@
 /* Dashboard: favourite-verse banner, resume card, course progress, quiz
  * history and recent notes. Rendered by Shell once the user is signed in. */
-window.Page = function (ctx) {
+window.Page = async function (ctx) {
   var el = UI.el;
   var user = Store.user();
   var state = Store.state();
@@ -75,7 +75,7 @@ window.Page = function (ctx) {
 
   /* recent notes --------------------------------------------------------- */
   var notesWrap = document.getElementById('note-briefs');
-  var notes = Store.notes().slice(0, 3);
+  var notes = (await Store.allNotes()).slice(0, 3);
   if (!notes.length) {
     notesWrap.appendChild(el('div', 'empty', 'Notes you write inside a lesson show up here.'));
   }

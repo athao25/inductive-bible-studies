@@ -1,297 +1,337 @@
-/* Account + progress store for the LMS shell.
+/* Account + study data, backed by Supabase.
  *
- * The site is a static GitHub Pages build, so the SQLite schema in the design
- * handoff is modelled client-side: one localStorage document under 'ibs-lms-v1'
- * holding users, the active session, and per-user state (lesson progress, quiz
- * attempts, favourite verse, dark mode). Shape mirrors the handoff tables:
+ * Auth is Supabase Auth (email + password); every row is scoped by row-level
+ * security to auth.uid(), so this file never filters by user itself — it asks
+ * for what it needs and the database returns only that account's rows.
  *
- *   users[email]      = { email, name, hash, salt, created }
- *   session           = email | null
- *   data[email] = {
- *     dark, favRef, favText,
- *     progress['<course>/<lesson-file>'] = { section, updated, completed },
- *     quiz[] = { course, file, score, total, at }
- *   }
+ * Load order on every page:
+ *   assets/config.js  assets/vendor/supabase.js  assets/data/courses.js  assets/store.js
  *
- * Lesson notes are per account too: assets/notes.js writes them under
- * 'ibs-notes/<email>/<course>' via Store.notesKey(). The pre-redesign
- * '<course>-study-notes' keys are imported into the first account that signs in
- * on this browser, so notebooks written before the redesign survive it.
- * Include before every other LMS script.
+ * Everything here is async. Call `await Store.init()` once (assets/shell.js
+ * does it) before any other method; after that the cached reads below are
+ * synchronous and the writes return promises.
+ *
+ * Lessons are addressed the way the site already addresses them — course key
+ * plus lesson file name — and mapped to lesson ids through an index cached in
+ * sessionStorage, so a page load costs one round trip, not 214.
  */
 window.Store = (function () {
-  var KEY = 'ibs-lms-v1';
+  var LESSON_CACHE = 'ibs-lesson-index-v1';
+  var THEME_KEY = 'study-theme';           // mirrored so theme.js can paint before JS runs
   var DEFAULT_FAV_REF = '2 Timothy 2:15';
   var DEFAULT_FAV_TEXT = 'Do your best to present yourself to God as one approved, a worker ' +
     'who has no need to be ashamed, rightly handling the word of truth.';
 
-  function read() {
-    try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; }
+  var client = null;
+  var session = null;
+  var profile = null;
+  var index = null;        // { 'john/0020-....html': lessonId, ... } plus reverse
+  var progress = {};       // 'john/0020-....html' -> { section, updated, completed }
+  var attempts = [];       // { course, file, score, total, at }
+  var ready = null;
+
+  function local(key) {
+    try { return localStorage.getItem(key); } catch (e) { return null; }
   }
-  function write(doc) {
-    try { localStorage.setItem(KEY, JSON.stringify(doc)); } catch (e) { /* private mode etc. */ }
-  }
-  function doc() {
-    var d = read();
-    if (!d.users) d.users = {};
-    if (!d.data) d.data = {};
-    if (!('session' in d)) d.session = null;
-    return d;
+  function setLocal(key, value) {
+    try { localStorage.setItem(key, value); } catch (e) { /* private mode etc. */ }
   }
 
-  function blankUserData() {
-    return { dark: false, favRef: DEFAULT_FAV_REF, favText: DEFAULT_FAV_TEXT, progress: {}, quiz: [] };
+  function fail(error) {
+    if (!error) return null;
+    return { error: error.message || String(error) };
   }
 
-  /* Deliberately light: there is no server to protect, and the store is already
-     readable by anyone at this browser. It only keeps the password out of plain
-     sight in localStorage. */
-  function hash(pass, salt) {
-    var s = salt + '|' + pass, h1 = 0x811c9dc5, h2 = 0x01000193;
-    for (var i = 0; i < s.length; i++) {
-      h1 = ((h1 ^ s.charCodeAt(i)) * 16777619) >>> 0;
-      h2 = ((h2 + s.charCodeAt(i) * (i + 7)) * 2654435761) >>> 0;
-    }
-    return h1.toString(16) + h2.toString(16);
-  }
-  function newSalt() {
-    return Math.random().toString(36).slice(2) + Date.now().toString(36);
-  }
+  /* ------------------------------------------------------------- client */
 
-  function norm(email) { return String(email || '').trim().toLowerCase(); }
-
-  /* Where one course's notes live for one account. Signed out (or before an
-     account exists) this is the pre-redesign key, so notes.js still works. */
-  function notesKeyFor(email, course) {
-    return email ? 'ibs-notes/' + email + '/' + course : course + '-study-notes';
-  }
-
-  /* One-off import of the pre-redesign per-course progress and notes keys into
-     the first account that claims them on this browser. */
-  function migrate(d, email) {
-    var courses = window.COURSES ? Object.keys(window.COURSES) : [];
-    var bucket = d.data[email];
-    if (bucket.migrated) return;
-    courses.forEach(function (key) {
-      var old = null;
-      try { old = JSON.parse(localStorage.getItem(key + '-study-progress')); } catch (e) { /* ignore */ }
-      if (old) {
-        Object.keys(old).forEach(function (file) {
-          if (!old[file]) return;
-          var id = key + '/' + file;
-          if (bucket.progress[id]) return;
-          bucket.progress[id] = { section: '', updated: 0, completed: 1 };
-        });
-      }
-
-      var oldNotes = null;
-      try { oldNotes = JSON.parse(localStorage.getItem(key + '-study-notes')); } catch (e) { /* ignore */ }
-      if (!oldNotes || !Object.keys(oldNotes).length) return;
-      var target = notesKeyFor(email, key);
-      var mine = {};
-      try { mine = JSON.parse(localStorage.getItem(target)) || {}; } catch (e) { /* ignore */ }
-      Object.keys(oldNotes).forEach(function (file) {
-        if (!mine[file]) mine[file] = oldNotes[file];
-      });
-      try { localStorage.setItem(target, JSON.stringify(mine)); } catch (e) { /* private mode etc. */ }
+  function build() {
+    if (client) return client;
+    if (!window.supabase || !window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) return null;
+    client = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
     });
-    bucket.migrated = 1;
+    return client;
   }
+
+  /* Lesson id lookup. Content is world-readable and changes only when lessons
+     are added, so it is cached for the tab rather than refetched per page. */
+  async function loadIndex() {
+    var cached = null;
+    try { cached = JSON.parse(sessionStorage.getItem(LESSON_CACHE)); } catch (e) { /* ignore */ }
+    if (cached && cached.byKey && Object.keys(cached.byKey).length) { index = cached; return; }
+
+    var res = await client.from('lessons').select('id, course_id, slug');
+    if (res.error) { index = { byKey: {}, byId: {} }; return; }
+    var byKey = {}, byId = {};
+    res.data.forEach(function (row) {
+      var key = row.course_id + '/' + row.slug;
+      byKey[key] = row.id;
+      byId[row.id] = key;
+    });
+    index = { byKey: byKey, byId: byId };
+    try { sessionStorage.setItem(LESSON_CACHE, JSON.stringify(index)); } catch (e) { /* ignore */ }
+  }
+
+  async function loadUserData() {
+    progress = {};
+    attempts = [];
+    profile = null;
+    if (!session) return;
+
+    var results = await Promise.all([
+      client.from('profiles').select('display_name, fav_verse_ref, fav_verse_text, dark_mode').maybeSingle(),
+      client.from('lesson_progress').select('lesson_id, section, completed_at, updated_at'),
+      client.from('quiz_attempts').select('lesson_id, score, total, created_at').order('created_at', { ascending: false })
+    ]);
+
+    var p = results[0].data;
+    profile = {
+      name: (p && p.display_name) || session.user.email.split('@')[0],
+      favRef: (p && p.fav_verse_ref) || DEFAULT_FAV_REF,
+      favText: (p && p.fav_verse_text) || DEFAULT_FAV_TEXT,
+      dark: !!(p && p.dark_mode)
+    };
+    setLocal(THEME_KEY, profile.dark ? 'dark' : 'light');
+
+    (results[1].data || []).forEach(function (row) {
+      var key = index.byId[row.lesson_id];
+      if (!key) return;
+      progress[key] = {
+        section: row.section || '',
+        updated: Date.parse(row.updated_at) || 0,
+        completed: row.completed_at ? Date.parse(row.completed_at) : 0
+      };
+    });
+
+    (results[2].data || []).forEach(function (row) {
+      var key = index.byId[row.lesson_id];
+      if (!key) return;
+      var parts = key.split('/');
+      attempts.push({
+        course: parts[0], file: parts[1],
+        score: row.score, total: row.total, at: Date.parse(row.created_at) || 0
+      });
+    });
+  }
+
+  function lessonId(course, file) {
+    return index && index.byKey[course + '/' + file];
+  }
+
+  /* ---------------------------------------------------------------- api */
 
   var api = {
     DEFAULT_FAV_REF: DEFAULT_FAV_REF,
     DEFAULT_FAV_TEXT: DEFAULT_FAV_TEXT,
 
-    currentEmail: function () { return doc().session; },
+    /* Resolves once the session, lesson index and this account's rows are in
+       hand. Safe to await repeatedly; the work happens once. */
+    init: function () {
+      if (ready) return ready;
+      ready = (async function () {
+        if (!build()) return { error: 'Supabase is not configured. Set SUPABASE_ANON_KEY in assets/config.js.' };
+        var got = await client.auth.getSession();
+        session = got.data.session || null;
+        await loadIndex();
+        await loadUserData();
+        client.auth.onAuthStateChange(function (event, next) {
+          session = next || null;
+        });
+        return { ok: true };
+      })();
+      return ready;
+    },
+
+    configured: function () { return !!(window.SUPABASE_URL && window.SUPABASE_ANON_KEY); },
+    client: function () { return client; },
+
+    /* --------------------------------------------------------- accounts */
+
+    signedIn: function () { return !!session; },
 
     user: function () {
-      var d = doc();
-      if (!d.session || !d.users[d.session]) return null;
-      var u = d.users[d.session];
-      return { email: u.email, name: u.name };
+      if (!session) return null;
+      return {
+        id: session.user.id,
+        email: session.user.email,
+        name: (profile && profile.name) || session.user.email.split('@')[0]
+      };
     },
 
-    signedIn: function () { return !!api.user(); },
-
-    signUp: function (email, name, pass) {
-      var d = doc();
-      var e = norm(email);
-      if (!e || !pass) return { error: 'Email and password are required.' };
-      if (d.users[e]) return { error: 'That email already has an account on this browser.' };
-      var salt = newSalt();
-      d.users[e] = { email: e, name: (name || '').trim() || e.split('@')[0], hash: hash(pass, salt), salt: salt, created: Date.now() };
-      d.data[e] = blankUserData();
-      d.session = e;
-      migrate(d, e);
-      write(d);
+    signUp: async function (email, name, password) {
+      if (!build()) return { error: 'Supabase is not configured.' };
+      var res = await client.auth.signUp({
+        email: String(email || '').trim(),
+        password: password,
+        options: { data: { display_name: (name || '').trim() } }
+      });
+      if (res.error) return fail(res.error);
+      // With email confirmation on, Supabase returns a user but no session.
+      if (!res.data.session) return { ok: true, needsConfirmation: true };
+      session = res.data.session;
+      await loadUserData();
       return { ok: true };
     },
 
-    signIn: function (email, pass) {
-      var d = doc();
-      var e = norm(email);
-      var u = d.users[e];
-      if (!u) return { error: 'No account for that email on this browser. Create one below.' };
-      if (u.hash !== hash(pass, u.salt)) return { error: 'That password does not match.' };
-      if (!d.data[e]) d.data[e] = blankUserData();
-      d.session = e;
-      migrate(d, e);
-      write(d);
+    signIn: async function (email, password) {
+      if (!build()) return { error: 'Supabase is not configured.' };
+      var res = await client.auth.signInWithPassword({
+        email: String(email || '').trim(),
+        password: password
+      });
+      if (res.error) return fail(res.error);
+      session = res.data.session;
+      await loadUserData();
       return { ok: true };
     },
 
-    signOut: function () {
-      var d = doc();
-      d.session = null;
-      write(d);
+    resetPassword: async function (email, redirectTo) {
+      if (!build()) return { error: 'Supabase is not configured.' };
+      var res = await client.auth.resetPasswordForEmail(String(email || '').trim(), { redirectTo: redirectTo });
+      return res.error ? fail(res.error) : { ok: true };
     },
 
-    /* Per-user state ---------------------------------------------------- */
+    signOut: async function () {
+      if (client) await client.auth.signOut();
+      session = null;
+      profile = null;
+      progress = {};
+      attempts = [];
+      return { ok: true };
+    },
+
+    /* ---------------------------------------------------------- profile */
 
     state: function () {
-      var d = doc();
-      if (!d.session) return blankUserData();
-      if (!d.data[d.session]) { d.data[d.session] = blankUserData(); write(d); }
-      return d.data[d.session];
+      return profile || { name: '', favRef: DEFAULT_FAV_REF, favText: DEFAULT_FAV_TEXT, dark: false };
     },
 
-    update: function (fn) {
-      var d = doc();
-      if (!d.session) return blankUserData();
-      if (!d.data[d.session]) d.data[d.session] = blankUserData();
-      fn(d.data[d.session]);
-      write(d);
-      return d.data[d.session];
-    },
+    updateProfile: async function (patch) {
+      if (!session) return { error: 'Not signed in.' };
+      var row = {};
+      if ('name' in patch) row.display_name = patch.name;
+      if ('favRef' in patch) row.fav_verse_ref = patch.favRef;
+      if ('favText' in patch) row.fav_verse_text = patch.favText;
+      if ('dark' in patch) row.dark_mode = !!patch.dark;
 
-    setProfile: function (name, email) {
-      var d = doc();
-      if (!d.session) return { error: 'Not signed in.' };
-      var cur = d.session;
-      var next = norm(email);
-      if (next && next !== cur) {
-        if (d.users[next]) return { error: 'That email already has an account on this browser.' };
-        d.users[next] = d.users[cur];
-        d.users[next].email = next;
-        d.data[next] = d.data[cur];
-        delete d.users[cur];
-        delete d.data[cur];
-        d.session = next;
-        // Notes are keyed by email, so they move with the account.
-        Object.keys(window.COURSES || {}).forEach(function (key) {
-          var from = notesKeyFor(cur, key);
-          var body = null;
-          try { body = localStorage.getItem(from); } catch (e) { /* ignore */ }
-          if (!body) return;
-          try {
-            localStorage.setItem(notesKeyFor(next, key), body);
-            localStorage.removeItem(from);
-          } catch (e) { /* private mode etc. */ }
-        });
-      }
-      d.users[d.session].name = (name || '').trim() || d.users[d.session].name;
-      write(d);
+      var res = await client.from('profiles').update(row).eq('user_id', session.user.id);
+      if (res.error) return fail(res.error);
+      Object.keys(patch).forEach(function (k) { profile[k] = patch[k]; });
+      if ('dark' in patch) setLocal(THEME_KEY, patch.dark ? 'dark' : 'light');
       return { ok: true };
     },
 
-    /* Progress ---------------------------------------------------------- */
+    /* --------------------------------------------------------- progress */
 
-    lessonId: function (course, file) { return course + '/' + file; },
-
-    lessonProgress: function (course, file) {
-      return api.state().progress[course + '/' + file] || null;
-    },
+    lessonProgress: function (course, file) { return progress[course + '/' + file] || null; },
 
     isComplete: function (course, file) {
-      var p = api.lessonProgress(course, file);
+      var p = progress[course + '/' + file];
       return !!(p && p.completed);
     },
 
-    touchLesson: function (course, file, section) {
-      return api.update(function (s) {
-        var id = course + '/' + file;
-        var p = s.progress[id] || { section: '', updated: 0, completed: 0 };
-        p.updated = Date.now();
-        if (section) p.section = section;
-        s.progress[id] = p;
-      });
+    /* Records where the reader is. Called on scroll, so it writes at most one
+       row and never blocks rendering. */
+    touchLesson: async function (course, file, section) {
+      if (!session) return { error: 'Not signed in.' };
+      var id = lessonId(course, file);
+      if (!id) return { error: 'Unknown lesson.' };
+      var key = course + '/' + file;
+      var current = progress[key] || { section: '', updated: 0, completed: 0 };
+      current.section = section || current.section;
+      current.updated = Date.now();
+      progress[key] = current;
+
+      var res = await client.from('lesson_progress').upsert({
+        user_id: session.user.id,
+        lesson_id: id,
+        section: current.section,
+        completed_at: current.completed ? new Date(current.completed).toISOString() : null,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id,lesson_id' });
+      return res.error ? fail(res.error) : { ok: true };
     },
 
-    setComplete: function (course, file, done) {
-      return api.update(function (s) {
-        var id = course + '/' + file;
-        var p = s.progress[id] || { section: '', updated: 0, completed: 0 };
-        p.completed = done ? Date.now() : 0;
-        p.updated = Date.now();
-        s.progress[id] = p;
-      });
+    setComplete: async function (course, file, done) {
+      if (!session) return { error: 'Not signed in.' };
+      var id = lessonId(course, file);
+      if (!id) return { error: 'Unknown lesson.' };
+      var key = course + '/' + file;
+      var current = progress[key] || { section: '', updated: 0, completed: 0 };
+      current.completed = done ? Date.now() : 0;
+      current.updated = Date.now();
+      progress[key] = current;
+
+      var res = await client.from('lesson_progress').upsert({
+        user_id: session.user.id,
+        lesson_id: id,
+        section: current.section,
+        completed_at: done ? new Date(current.completed).toISOString() : null,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id,lesson_id' });
+      return res.error ? fail(res.error) : { ok: true };
     },
 
     courseStats: function (key) {
       var c = window.COURSES && window.COURSES[key];
       if (!c) return { done: 0, total: 0, pct: 0 };
-      var s = api.state();
-      var done = c.lessons.filter(function (l) {
-        var p = s.progress[key + '/' + l.f];
-        return p && p.completed;
-      }).length;
+      var done = c.lessons.filter(function (l) { return api.isComplete(key, l.f); }).length;
       return { done: done, total: c.lessons.length, pct: c.lessons.length ? Math.round(done / c.lessons.length * 100) : 0 };
     },
 
-    /* Resume target: newest touched-but-unfinished lesson, else the first
-       uncompleted lesson of the most recently touched course, else lesson 1. */
+    /* Newest touched-but-unfinished lesson, else the next uncompleted lesson of
+       the most recently touched course, else the first lesson of John. */
     resume: function () {
-      var s = api.state();
       var courses = window.COURSES || {};
       var best = null;
-      Object.keys(s.progress).forEach(function (id) {
-        var p = s.progress[id];
-        if (p.completed) return;
-        if (!p.updated) return;
-        if (!best || p.updated > best.updated) best = { id: id, updated: p.updated, section: p.section };
+      Object.keys(progress).forEach(function (key) {
+        var p = progress[key];
+        if (p.completed || !p.updated) return;
+        if (!best || p.updated > best.updated) best = { key: key, updated: p.updated, section: p.section };
       });
+
       if (!best) {
         var newest = 0, newestCourse = null;
-        Object.keys(s.progress).forEach(function (id) {
-          var p = s.progress[id];
+        Object.keys(progress).forEach(function (key) {
+          var p = progress[key];
           var t = Math.max(p.updated || 0, p.completed || 0);
-          if (t > newest) { newest = t; newestCourse = id.split('/')[0]; }
+          if (t > newest) { newest = t; newestCourse = key.split('/')[0]; }
         });
-        var key = newestCourse || 'john';
-        var c = courses[key];
-        if (!c) return null;
-        var next = c.lessons.find(function (l) {
-          var p = s.progress[key + '/' + l.f];
-          return !(p && p.completed);
-        }) || c.lessons[0];
-        return { course: key, lesson: next, section: '' };
+        var ck = newestCourse || 'john';
+        var course = courses[ck];
+        if (!course) return null;
+        var next = course.lessons.find(function (l) { return !api.isComplete(ck, l.f); }) || course.lessons[0];
+        return { course: ck, lesson: next, section: '' };
       }
-      var parts = best.id.split('/');
+
+      var parts = best.key.split('/');
       var cc = courses[parts[0]];
       if (!cc) return null;
       var lesson = cc.lessons.find(function (l) { return l.f === parts[1]; });
-      if (!lesson) return null;
-      return { course: parts[0], lesson: lesson, section: best.section || '' };
+      return lesson ? { course: parts[0], lesson: lesson, section: best.section } : null;
     },
 
-    /* Quiz attempts ------------------------------------------------------ */
+    /* ------------------------------------------------------------- quiz */
 
-    recordQuiz: function (course, file, score, total) {
-      return api.update(function (s) {
-        s.quiz.push({ course: course, file: file, score: score, total: total, at: Date.now() });
-        if (s.quiz.length > 500) s.quiz = s.quiz.slice(-500);
+    recordQuiz: async function (course, file, score, total) {
+      if (!session) return { error: 'Not signed in.' };
+      var id = lessonId(course, file);
+      if (!id) return { error: 'Unknown lesson.' };
+      attempts.unshift({ course: course, file: file, score: score, total: total, at: Date.now() });
+      var res = await client.from('quiz_attempts').insert({
+        user_id: session.user.id, lesson_id: id, score: score, total: total
       });
+      return res.error ? fail(res.error) : { ok: true };
     },
 
     /* Latest attempt per lesson, newest first. */
     quizHistory: function (limit) {
-      var s = api.state();
       var latest = {};
-      s.quiz.forEach(function (a) {
-        var id = a.course + '/' + a.file;
-        if (!latest[id] || a.at > latest[id].at) latest[id] = a;
+      attempts.forEach(function (a) {
+        var key = a.course + '/' + a.file;
+        if (!latest[key] || a.at > latest[key].at) latest[key] = a;
       });
-      var rows = Object.keys(latest).map(function (id) { return latest[id]; });
+      var rows = Object.keys(latest).map(function (k) { return latest[k]; });
       rows.sort(function (a, b) { return b.at - a.at; });
       return limit ? rows.slice(0, limit) : rows;
     },
@@ -303,51 +343,110 @@ window.Store = (function () {
       return Math.round(pct * 100);
     },
 
-    /* Notes -------------------------------------------------------------- */
+    /* ------------------------------------------------------------ notes */
 
-    /* Storage key holding one course's notes for the signed-in account. */
-    notesKey: function (course) { return notesKeyFor(doc().session, course); },
+    /* One lesson's notes, in the shape the lesson panel edits:
+       { o: [{ r, t, h }], i: [...], a: { god, me, do } } */
+    lessonNotes: async function (course, file) {
+      var empty = { o: [], i: [], a: {}, u: 0 };
+      if (!session) return empty;
+      var id = lessonId(course, file);
+      if (!id) return empty;
+      var res = await client.from('notes')
+        .select('id, kind, slot, reference, body, clip, position, updated_at')
+        .eq('lesson_id', id)
+        .order('position', { ascending: true });
+      if (res.error || !res.data) return empty;
 
-    /* Flattens the per-course notes written by assets/notes.js into notebook rows. */
-    notes: function () {
-      var out = [];
-      var courses = window.COURSES || {};
-      Object.keys(courses).forEach(function (key) {
-        var all = {};
-        try { all = JSON.parse(localStorage.getItem(api.notesKey(key))) || {}; } catch (e) { /* ignore */ }
-        var course = courses[key];
-        Object.keys(all).forEach(function (file) {
-          var lesson = course.lessons.find(function (l) { return l.f === file; });
-          if (!lesson) return;
-          var n = all[file] || {};
-          var when = n.u || 0;
-          (n.o || []).forEach(function (line) {
-            out.push({ course: key, file: file, lesson: lesson, kind: 'Observation', ref: line.r || lesson.ref, text: line.t, when: when, clip: line.h || '' });
-          });
-          (n.i || []).forEach(function (line) {
-            out.push({ course: key, file: file, lesson: lesson, kind: 'Interpretation', ref: line.r || lesson.ref, text: line.t, when: when, clip: line.h || '' });
-          });
-          var a = n.a || {};
-          ['god', 'me', 'do'].forEach(function (k) {
-            if (!a[k]) return;
-            out.push({ course: key, file: file, lesson: lesson, kind: 'Application', ref: lesson.ref, text: a[k], when: when, sub: k });
-          });
-        });
+      var out = { o: [], i: [], a: {}, u: 0 };
+      res.data.forEach(function (row) {
+        var when = Date.parse(row.updated_at) || 0;
+        if (when > out.u) out.u = when;
+        if (row.kind === 'application') { out.a[row.slot] = row.body; return; }
+        var line = { r: row.reference || '', t: row.body };
+        if (row.clip) line.h = row.clip;
+        out[row.kind === 'observation' ? 'o' : 'i'].push(line);
       });
-      out.sort(function (x, y) { return y.when - x.when; });
       return out;
     },
 
-    /* Theme -------------------------------------------------------------- */
+    /* Replaces this lesson's notes with what the panel currently holds. The
+       panel is the whole editing surface for one lesson, so a delete-then-insert
+       keeps the rows and the UI in step without diffing line by line. */
+    saveLessonNotes: async function (course, file, data) {
+      if (!session) return { error: 'Not signed in.' };
+      var id = lessonId(course, file);
+      if (!id) return { error: 'Unknown lesson.' };
+
+      var rows = [];
+      ['o', 'i'].forEach(function (stage) {
+        (data[stage] || []).forEach(function (line, i) {
+          if (!line.t) return;
+          rows.push({
+            user_id: session.user.id, lesson_id: id,
+            kind: stage === 'o' ? 'observation' : 'interpretation',
+            slot: null, reference: line.r || '', body: line.t, clip: line.h || '', position: i
+          });
+        });
+      });
+      ['god', 'me', 'do'].forEach(function (slot, i) {
+        var body = (data.a || {})[slot];
+        if (!body) return;
+        rows.push({
+          user_id: session.user.id, lesson_id: id,
+          kind: 'application', slot: slot, reference: '', body: body, clip: '', position: i
+        });
+      });
+
+      var del = await client.from('notes').delete().eq('lesson_id', id);
+      if (del.error) return fail(del.error);
+      if (!rows.length) return { ok: true, count: 0 };
+      var ins = await client.from('notes').insert(rows);
+      return ins.error ? fail(ins.error) : { ok: true, count: rows.length };
+    },
+
+    /* Every note this account has written, newest first, for the notebook. */
+    allNotes: async function () {
+      if (!session) return [];
+      var res = await client.from('notes')
+        .select('lesson_id, kind, slot, reference, body, clip, updated_at')
+        .order('updated_at', { ascending: false });
+      if (res.error || !res.data) return [];
+
+      var courses = window.COURSES || {};
+      var out = [];
+      res.data.forEach(function (row) {
+        var key = index.byId[row.lesson_id];
+        if (!key) return;
+        var parts = key.split('/');
+        var course = courses[parts[0]];
+        var lesson = course && course.lessons.find(function (l) { return l.f === parts[1]; });
+        if (!lesson) return;
+        out.push({
+          course: parts[0], file: parts[1], lesson: lesson,
+          kind: row.kind.charAt(0).toUpperCase() + row.kind.slice(1),
+          slot: row.slot || '',
+          ref: row.reference || lesson.ref,
+          text: row.body,
+          clip: row.clip || '',
+          when: Date.parse(row.updated_at) || 0
+        });
+      });
+      return out;
+    },
+
+    /* ------------------------------------------------------------ theme */
 
     dark: function () {
-      if (api.signedIn()) return !!api.state().dark;
-      try { return localStorage.getItem('study-theme') === 'dark'; } catch (e) { return false; }
+      if (profile) return !!profile.dark;
+      return local(THEME_KEY) === 'dark';
     },
 
     setDark: function (on) {
-      if (api.signedIn()) api.update(function (s) { s.dark = !!on; });
-      try { localStorage.setItem('study-theme', on ? 'dark' : 'light'); } catch (e) { /* ignore */ }
+      setLocal(THEME_KEY, on ? 'dark' : 'light');
+      if (profile) profile.dark = !!on;
+      if (session) return api.updateProfile({ dark: !!on });
+      return Promise.resolve({ ok: true });
     }
   };
 

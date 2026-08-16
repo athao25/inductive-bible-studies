@@ -10,6 +10,8 @@
 <link rel="apple-touch-icon" href="assets/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#7a2e2e">
+<script src="assets/config.js" defer></script>
+<script src="assets/vendor/supabase.js" defer></script>
 <script src="assets/data/courses.js" defer></script>
 <script src="assets/store.js" defer></script>
 <script src="assets/auth.js" defer></script>
@@ -29,14 +31,15 @@
       <label class="field">Email
         <input id="email" type="email" autocomplete="email" required>
       </label>
-      <label class="field">Password
+      <label class="field" id="password-field">Password
         <input id="password" type="password" autocomplete="current-password" required>
       </label>
       <div class="form-error" id="auth-error"></div>
+      <div class="form-ok" id="auth-notice"></div>
       <button class="btn" type="submit" id="auth-action">Sign in</button>
       <div class="auth-alt" id="auth-alt"></div>
     </form>
-    <div class="auth-foot">Accounts and progress are stored in this browser. Nothing is sent to a server.</div>
+    <div class="auth-foot">Your account, progress and notes sync to your Supabase project, so they follow you across devices.</div>
   </div>
 </div>
 </body>

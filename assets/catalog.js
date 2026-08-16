@@ -1,5 +1,5 @@
 /* Course catalog: one card per course plus the canon map already in the page. */
-window.Page = function (ctx) {
+window.Page = async function (ctx) {
   var el = UI.el;
   var courses = window.COURSES;
   var grid = document.getElementById('catalog');

@@ -20,12 +20,11 @@ attributed excerpts only.
 The site is an account-based LMS: sign in, resume where you stopped, mark lessons complete, take
 the lesson quiz into a grade history, keep a notebook, and pin a favourite verse to the dashboard.
 
-The redesign handoff specified Node + Express + SQLite. GitHub Pages serves static files only, so
-the same data model runs client-side: `assets/store.js` keeps one `localStorage` document
-(`ibs-lms-v1`) shaped like the handoff's tables — users, session, lesson_progress, quiz_attempts,
-favourite verse, dark mode — with each account's notes alongside it under
-`ibs-notes/<email>/<course>`. Accounts are per browser and nothing is sent anywhere; the password is
-only obscured, not protected, and the sign-in screen says so.
+Accounts are **Supabase Auth** (email + password) and every row lives in **Supabase Postgres**, so
+progress, quiz history and notes follow you across devices. The pages stay static — GitHub Pages
+serves plain HTML, and the browser talks to Supabase directly with the anon key. There is no server
+tier, so **row-level security is the only thing standing between accounts**: every per-user table is
+scoped to `auth.uid()` in the database itself, and `assets/store.js` never filters by user.
 
 Screens:
 
@@ -51,11 +50,13 @@ assets/
   lms.css                 design tokens, app shell, every screen (light + dark)
   course.css              long-form lesson prose; its legacy vars point at the new tokens
   theme.js                applies the saved theme before first paint
-  store.js                accounts, progress, quiz attempts, notes, favourite verse
-  shell.js                sidebar, auth guard, dark-mode toggle; calls window.Page
+  config.js               Supabase URL + anon key (public values)
+  vendor/supabase.js      vendored supabase-js UMD build, so nothing loads from a CDN
+  store.js                Supabase-backed accounts, progress, quiz attempts, notes
+  shell.js                sidebar, auth guard, dark-mode toggle; awaits Store.init(), calls window.Page
   ui.js                   shared element / date / progress-bar helpers
   dashboard.js catalog.js course-page.js lesson.js notebook-page.js settings.js auth.js
-  notes.js                per-lesson notebook panel (observation/interpretation/application)
+  notes.js                per-lesson notebook panel, mounted by lesson.js and saved to the notes table
   quiz.js                 quiz widget; emits `quiz:complete` for the grade history
   data/courses.js         GENERATED lesson index (units, references, scripture, minutes)
   icons/<course>/         per-course icon art
@@ -67,9 +68,20 @@ assets/
   docs/                   mission, curriculum, notes, learning records
 scripts/
   build-course-data.js    regenerates assets/data/courses.js from the lesson HTML
-  retrofit-pages.js       puts lesson/reference pages on the shell (idempotent)
+  build-seed-sql.js       regenerates the course/unit/lesson seed migration
+  retrofit-pages.js       puts every page on the current script stack (idempotent)
   smoke-test.js           jsdom checks across every screen
+  supabase-stub.js        in-memory Supabase double used by the tests
+supabase/migrations/      0001 schema + RLS, 0002 content seed, 0003 grant tightening
 ```
+
+## Setup
+
+1. Put the project's **anon (publishable) key** in `assets/config.js`. It is public by design — RLS
+   is what protects the data. The `service_role` key and the database password must never go here.
+2. In the Supabase dashboard under Authentication, decide whether email confirmation is required.
+   With it on, sign-up returns no session and the screen says to check your email first.
+3. `npm run db:migrate` to create the schema and seed the 214 lessons.
 
 Each page names its own screen script by assigning `window.Page`; `assets/shell.js` runs it after
 the sidebar is built and the visitor is known to be signed in.
@@ -93,10 +105,12 @@ dashboard and sidebar pick it up automatically.
 
 ```
 npm run serve      # http://localhost:8000
-npm test           # jsdom smoke test of every screen
+npm test           # 58 jsdom checks across every screen
 ```
 
-Course data loads via plain script tags rather than `fetch`, so `file://` works too.
+The tests run against `scripts/supabase-stub.js`, an in-memory double that mirrors the RLS rules, so
+they need neither network nor credentials. Serve over http rather than `file://`: Supabase Auth
+stores its session per origin.
 
 ## Not in this repo
 
@@ -104,17 +118,38 @@ Each course keeps a personal copy of the owner's MacArthur Study Bible notes at
 `<course>/reference/macarthur-notes.html`. That is copyrighted material for private use, so it is
 gitignored and never reaches the public site. The files stay on local disk only.
 
-## Storage keys
+## Database
 
-| Key | What |
-| --- | --- |
-| `ibs-lms-v1` | accounts, session, progress, quiz attempts, favourite verse, dark mode |
-| `ibs-notes/<email>/<course>` | lesson notes for one account, written by `assets/notes.js` |
-| `study-theme` | `light` / `dark`, applied before first paint |
-| `<course>-study-progress`, `<course>-study-notes` | pre-redesign progress and notes; imported once into the first account that signs in |
+Supabase project `bdkelzvemcoavpmezdeo` (ca-central-1), Postgres 17.
 
-Progress, quiz history and notes are all per account. Renaming an account's email moves its notes
-with it. Everything stays on the browser that wrote it; nothing is synced.
+| Table | Rows | Access |
+| --- | --- | --- |
+| `courses`, `units`, `lessons` | 4 / 35 / 214 | world-readable, seeded from `assets/data/courses.js` |
+| `profiles` | one per account | display name, favourite verse, dark mode |
+| `lesson_progress` | one per lesson touched | resume section + completion, PK `(user_id, lesson_id)` |
+| `quiz_attempts` | append-only | every attempt; the UI shows the latest per lesson |
+| `notes` | one row per note line | stage, verse reference, body, clipped passage |
+| `my_course_progress` | view | per-course completion for the caller (`security_invoker`) |
+
+RLS is on for every table. Content is `select` for `anon` and `authenticated`; per-user tables are
+`(select auth.uid()) = user_id` per command, with the `select auth.uid()` wrapper so it is evaluated
+once per query rather than once per row. Supabase's permissive default grants are revoked in
+`0003_tighten_grants.sql`, so `anon` holds `select` on content and nothing else, and quiz attempts
+cannot be updated or deleted by anyone.
+
+Migrations live in `supabase/migrations/` and are plain SQL, applied with psql:
+
+```
+npm run build:seed   # regenerate 0002 from the lesson files
+npm run db:migrate   # apply all three, in order
+```
+
+Connecting: the dashboard's `db.<ref>.supabase.co` host is IPv6-only. On an IPv4-only network use
+the session pooler — `aws-0-ca-central-1.pooler.supabase.com:5432`, user `postgres.<ref>`. A
+`[ibs]` entry in `~/.pg_service.conf` plus `~/.pgpass` makes that `psql service=ibs`.
+
+The only local storage left is `study-theme` (`light` / `dark`), mirrored from the profile so the
+theme paints before JavaScript runs, and a session-scoped cache of the lesson id lookup.
 
 ## Theme
 
@@ -132,7 +167,10 @@ into observation with the reference attached. It autosaves; `⌘↵` saves and m
 complete.
 
 `notebook.html` compiles everything written, newest first, filtered by stage or by highlights
-(clipped passages), with Markdown export, a JSON backup of every course's notes, and print.
+(clipped passages), with Markdown export, a JSON backup, and print.
+
+Saving replaces that lesson's note rows rather than diffing them: the panel is the whole editing
+surface for one lesson, so delete-then-insert keeps the rows and the UI in step.
 
 ## History
 

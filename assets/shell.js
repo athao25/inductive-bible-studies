@@ -1,14 +1,14 @@
 /* Persistent app shell: left sidebar, theme toggle, auth guard.
  *
- * Include on every signed-in screen, after assets/store.js and the course
- * index (assets/data/courses.js):
- *   <script src="assets/store.js" defer></script>
- *   <script src="assets/data/courses.js" defer></script>
- *   <script src="assets/shell.js" defer></script>
+ * Include on every signed-in screen, after the Supabase stack:
+ *   assets/config.js  assets/vendor/supabase.js  assets/data/courses.js
+ *   assets/store.js   assets/ui.js   <page script>   assets/shell.js
  * Path depth is read off this script's own src, so the same tag works from the
  * root, a course folder or a lessons/ folder.
  *
  * Mark the active nav item with <body data-nav="dashboard|courses|notebook|settings">.
+ * A page script assigns window.Page; the shell awaits Store.init(), builds the
+ * chrome, then calls it.
  */
 window.Shell = (function () {
   var NAV = [
@@ -46,11 +46,17 @@ window.Shell = (function () {
     return n;
   }
 
-  function guard() {
-    if (Store.signedIn()) return true;
-    var here = location.pathname + location.search + location.hash;
-    location.replace(url('signin.html') + '?next=' + encodeURIComponent(here));
-    return false;
+  /* Shown instead of the app when assets/config.js has no anon key, so the page
+     explains itself rather than failing silently. */
+  function showSetupNotice(message) {
+    var main = document.querySelector('main') || document.body;
+    main.textContent = '';
+    var box = el('div', 'lms-card');
+    box.style.margin = '40px auto';
+    box.style.maxWidth = '560px';
+    box.appendChild(el('h2', null, 'Not connected'));
+    box.appendChild(el('p', 'empty', message));
+    main.appendChild(box);
   }
 
   function build() {
@@ -101,9 +107,9 @@ window.Shell = (function () {
     who.appendChild(el('div', 'lms-user-name', user.name));
     var out = el('a', 'lms-signout', 'Sign out');
     out.href = '#';
-    out.addEventListener('click', function (e) {
+    out.addEventListener('click', async function (e) {
       e.preventDefault();
-      Store.signOut();
+      await Store.signOut();
       location.href = url('signin.html');
     });
     who.appendChild(out);
@@ -119,18 +125,26 @@ window.Shell = (function () {
     document.body.appendChild(burger);
   }
 
-  function init() {
+  async function init() {
     document.body.classList.add('lms');
     applyTheme();
-    if (!guard()) return;
+
+    var started = await Store.init();
+    if (started && started.error) { showSetupNotice(started.error); return; }
+
+    if (!Store.signedIn()) {
+      var here = location.pathname + location.search + location.hash;
+      location.replace(url('signin.html') + '?next=' + encodeURIComponent(here));
+      return;
+    }
+
+    applyTheme();
     build();
-    if (typeof window.Page === 'function') window.Page({ root: root, url: url });
+    if (typeof window.Page === 'function') await window.Page({ root: root, url: url });
   }
 
-  var api = { url: url, root: root, applyTheme: applyTheme };
+  var api = { url: url, root: root, applyTheme: applyTheme, init: init };
 
-  /* Wait for DOMContentLoaded even when this runs as a deferred script, so page
-     scripts loaded after it have already registered window.Page. */
   if (document.readyState === 'complete') init();
   else document.addEventListener('DOMContentLoaded', init);
 

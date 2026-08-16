@@ -2,7 +2,7 @@
  * The page supplies <body data-course="john">. Units after the first
  * incomplete one are locked, as specified in the redesign handoff:
  * their rows render but do not link. */
-window.Page = function (ctx) {
+window.Page = async function (ctx) {
   var el = UI.el;
   var key = document.body.getAttribute('data-course');
   var c = window.COURSES[key];

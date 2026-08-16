@@ -4,6 +4,9 @@
   "description": "Static LMS for verse-by-verse inductive Bible study courses.",
   "scripts": {
     "build:data": "node scripts/build-course-data.js",
+    "build:seed": "node scripts/build-seed-sql.js",
+    "db:migrate": "psql service=ibs -v ON_ERROR_STOP=1 -f supabase/migrations/0001_init.sql -f supabase/migrations/0002_seed_content.sql -f supabase/migrations/0003_tighten_grants.sql",
+    "db:seed": "psql service=ibs -v ON_ERROR_STOP=1 -f supabase/migrations/0002_seed_content.sql",
     "retrofit": "node scripts/retrofit-pages.js",
     "test": "node scripts/smoke-test.js",
     "serve": "python3 -m http.server 8000"

@@ -1,11 +1,11 @@
 /* Lesson page behaviour on top of the existing lesson HTML.
  *
- * The 214 lesson files keep their own prose, scripture blocks, notes panel and
- * quizzes. This script adds the redesign chrome around them: breadcrumb and
- * kicker, the completion toggle, prev/next footer, resume-section tracking and
- * quiz-attempt recording. Include after store.js, ui.js, data/courses.js,
- * course.js and shell.js. */
-window.Page = function (ctx) {
+ * The 214 lesson files keep their own prose, scripture blocks and quizzes. This
+ * script adds the redesign chrome around them: breadcrumb and kicker, the notes
+ * panel, the completion toggle, prev/next footer, resume tracking and quiz
+ * recording. Everything it writes goes to Supabase through assets/store.js.
+ * Include after store.js, ui.js, data/courses.js, course.js, notes.js, shell.js. */
+window.Page = async function (ctx) {
   var el = UI.el;
   var course = window.COURSE;
   if (!course) return;
@@ -26,6 +26,9 @@ window.Page = function (ctx) {
     'Lesson ' + lesson.n + ' of ' + c.lessons.length + ' · ' + UI.unitShort(lesson.unit) + ' · ~' + lesson.mins + ' min');
   main.insertBefore(crumb, main.firstChild);
   main.insertBefore(kicker, h1);
+
+  /* notes panel ---------------------------------------------------------- */
+  if (window.LessonNotes) await LessonNotes.mount(course, file);
 
   /* footer --------------------------------------------------------------- */
   var idx = lesson.n - 1;
@@ -48,9 +51,13 @@ window.Page = function (ctx) {
     toggle.textContent = done ? '✓ Completed' : 'Mark lesson complete';
     toggle.classList.toggle('done', done);
   }
-  toggle.addEventListener('click', function () {
-    Store.setComplete(key, file, !Store.isComplete(key, file));
+  toggle.addEventListener('click', async function () {
+    var want = !Store.isComplete(key, file);
+    toggle.disabled = true;
+    var res = await Store.setComplete(key, file, want);
+    toggle.disabled = false;
     paintToggle();
+    if (res && res.error) toggle.textContent = 'Not saved — ' + res.error;
   });
   paintToggle();
   foot.appendChild(toggle);
@@ -77,24 +84,35 @@ window.Page = function (ctx) {
     });
     return seen;
   }
+
   Store.touchLesson(key, file, currentSection());
-  var ticking = null;
+
+  // One write per pause in scrolling, not one per scroll event.
+  var pending = null;
+  var lastSection = currentSection();
   window.addEventListener('scroll', function () {
-    if (ticking) return;
-    ticking = setTimeout(function () {
-      ticking = null;
-      Store.touchLesson(key, file, currentSection());
-    }, 800);
+    if (pending) return;
+    pending = setTimeout(function () {
+      pending = null;
+      var section = currentSection();
+      if (section === lastSection) return;
+      lastSection = section;
+      Store.touchLesson(key, file, section);
+    }, 1200);
   }, { passive: true });
 
   /* quiz attempts -------------------------------------------------------- */
-  document.addEventListener('quiz:complete', function (e) {
+  document.addEventListener('quiz:complete', async function (e) {
     if (e.detail.id !== 'quiz') return;
-    Store.recordQuiz(key, file, e.detail.score, e.detail.total);
     var host = document.getElementById('quiz');
     var strip = host.parentNode.querySelector('.quiz-result') || el('div', 'quiz-result');
-    strip.textContent = 'Score: ' + e.detail.score + '/' + e.detail.total + ' — saved to your grade history.' +
-      (e.detail.score === e.detail.total ? ' Well done.' : ' Review the highlighted answers and retake anytime.');
+    strip.textContent = 'Score: ' + e.detail.score + '/' + e.detail.total + ' — saving…';
     if (!strip.parentNode) host.parentNode.insertBefore(strip, host.nextSibling);
+
+    var res = await Store.recordQuiz(key, file, e.detail.score, e.detail.total);
+    strip.textContent = res && res.error
+      ? 'Score: ' + e.detail.score + '/' + e.detail.total + ' — not saved (' + res.error + ')'
+      : 'Score: ' + e.detail.score + '/' + e.detail.total + ' — saved to your grade history.' +
+        (e.detail.score === e.detail.total ? ' Well done.' : ' Review the highlighted answers and retake anytime.');
   });
 };

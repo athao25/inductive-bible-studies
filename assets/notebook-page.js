@@ -1,8 +1,8 @@
 /* Notebook: every note written in a lesson, newest first, filtered by stage.
  * Keeps the pre-redesign exports (Markdown, JSON backup, print) as actions. */
-window.Page = function (ctx) {
+window.Page = async function (ctx) {
   var el = UI.el;
-  var notes = Store.notes();
+  var notes = await Store.allNotes();
   var filters = ['All', 'Observation', 'Interpretation', 'Application', 'Highlights'];
   var active = 'All';
 
@@ -11,7 +11,7 @@ window.Page = function (ctx) {
   var nCourses = Object.keys(courseCount).length;
   document.getElementById('nb-count').textContent =
     notes.length + (notes.length === 1 ? ' note' : ' notes') + ' across ' +
-    nCourses + ' course' + (nCourses === 1 ? '' : 's') + ' · saved in this browser';
+    nCourses + ' course' + (nCourses === 1 ? '' : 's') + ' · synced to your account';
 
   var list = document.getElementById('nb-list');
   var chips = document.getElementById('nb-filters');
@@ -97,9 +97,12 @@ window.Page = function (ctx) {
   [
     ['Markdown', function () { download('notebook.md', markdown(), 'text/markdown'); }],
     ['Backup JSON', function () {
-      var dump = {};
-      Object.keys(window.COURSES).forEach(function (key) {
-        try { dump[key] = JSON.parse(localStorage.getItem(Store.notesKey(key))) || {}; } catch (e) { dump[key] = {}; }
+      var dump = notes.map(function (n) {
+        return {
+          course: n.course, lesson: n.file, lessonTitle: n.lesson.title,
+          kind: n.kind, slot: n.slot, reference: n.ref, body: n.text,
+          clip: n.clip, updatedAt: new Date(n.when).toISOString()
+        };
       });
       download('notebook-backup.json', JSON.stringify(dump, null, 2), 'application/json');
     }],

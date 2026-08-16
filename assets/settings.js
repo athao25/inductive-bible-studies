@@ -1,5 +1,5 @@
 /* Account settings: favourite verse (dashboard banner) and profile. */
-window.Page = function () {
+window.Page = async function () {
   var state = Store.state();
   var user = Store.user();
 
@@ -14,12 +14,16 @@ window.Page = function () {
   refInput.addEventListener('input', clearSaved);
   textInput.addEventListener('input', clearSaved);
 
-  document.getElementById('fav-save').addEventListener('click', function () {
-    Store.update(function (s) {
-      s.favRef = refInput.value.trim() || Store.DEFAULT_FAV_REF;
-      s.favText = textInput.value.trim() || Store.DEFAULT_FAV_TEXT;
+  var favBtn = document.getElementById('fav-save');
+  favBtn.addEventListener('click', async function () {
+    favBtn.disabled = true;
+    var res = await Store.updateProfile({
+      favRef: refInput.value.trim() || Store.DEFAULT_FAV_REF,
+      favText: textInput.value.trim() || Store.DEFAULT_FAV_TEXT
     });
-    saved.textContent = 'Saved ✓';
+    favBtn.disabled = false;
+    saved.className = res.error ? 'form-error' : 'form-ok';
+    saved.textContent = res.error || 'Saved \u2713';
   });
 
   var nameInput = document.getElementById('profile-name');
@@ -27,16 +31,18 @@ window.Page = function () {
   var profileMsg = document.getElementById('profile-msg');
   nameInput.value = user.name;
   emailInput.value = user.email;
+  // Changing the sign-in address is an auth operation with its own confirmation
+  // email, so this screen edits the display name only.
+  emailInput.disabled = true;
 
-  document.getElementById('profile-save').addEventListener('click', function () {
-    var res = Store.setProfile(nameInput.value, emailInput.value);
-    if (res.error) {
-      profileMsg.className = 'form-error';
-      profileMsg.textContent = res.error;
-      return;
-    }
-    profileMsg.className = 'form-ok';
-    profileMsg.textContent = 'Saved ✓';
+  var nameBtn = document.getElementById('profile-save');
+  nameBtn.addEventListener('click', async function () {
+    nameBtn.disabled = true;
+    var res = await Store.updateProfile({ name: nameInput.value.trim() });
+    nameBtn.disabled = false;
+    profileMsg.className = res.error ? 'form-error' : 'form-ok';
+    profileMsg.textContent = res.error || 'Saved \u2713';
+    if (res.error) return;
     var u = Store.user();
     document.querySelector('.lms-user-name').textContent = u.name;
     document.querySelector('.lms-avatar').textContent = (u.name || u.email).charAt(0).toUpperCase();

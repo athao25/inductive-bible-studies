@@ -3,32 +3,19 @@
  *   <script src="../course.js" defer></script>
  *   <script src="../../assets/shell.js" defer></script>
  *   <script src="../../assets/notes.js" defer></script>
- * Only builds on lesson pages. Notes live in localStorage under
- * 'ibs-notes/<email>/<course.key>' as { '<lesson-file>': { o, i, a, u } }:
+ * Only builds on lesson pages, and only once the shell has a session: mounted
+ * by assets/lesson.js as `await LessonNotes.mount(course, file)`.
+ *
+ * The panel edits one lesson's notes in the shape the store speaks:
  *   o / i  observation + interpretation lines, [{ r: 'v.14', t: 'text', h: 'clipped' }]
  *          h is present only on clipped lines: the passage text as selected, kept
  *          so the notebook can show it as a highlight even after the line is edited
  *   a      application, { god, me, do }
- *   u      last-saved epoch ms
- * Nothing is synced anywhere; it is the same browser-local store as progress.
+ * Rows live in the `notes` table, scoped to the account by row-level security.
  */
-(function () {
-  var COURSE = window.COURSE;
-  if (!COURSE) return;
-
-  var here = location.pathname.split('/').pop();
-  var index = -1;
-  COURSE.lessons.forEach(function (l, i) { if (l.f === here) index = i; });
-  if (index === -1) return;
-
-  var main = document.querySelector('main');
-  if (!main) return;
-
-  /* Per account when signed in ('ibs-notes/<email>/<course>'), otherwise the
-     pre-redesign key. Read lazily: the account can change under a long session. */
-  function key() {
-    return window.Store ? Store.notesKey(COURSE.key) : COURSE.key + '-study-notes';
-  }
+window.LessonNotes = (function () {
+  var COURSE, here, index, main;
+  var loaded = { o: [], i: [], a: {}, u: 0 };
   var STAGES = [
     { k: 'o', label: 'Observation', gloss: 'what it says', cls: 'obs', add: 'add an observation' },
     { k: 'i', label: 'Interpretation', gloss: 'what it means', cls: 'int', add: 'add an interpretation' }
@@ -39,18 +26,12 @@
     { k: 'do', label: 'Do', hint: 'one thing this week\u2026' }
   ];
 
-  function loadAll() {
-    try { return JSON.parse(localStorage.getItem(key())) || {}; } catch (e) { return {}; }
-  }
-  function lesson() {
-    var all = loadAll();
-    var n = all[here] || {};
-    return { o: n.o || [], i: n.i || [], a: n.a || {}, u: n.u || 0 };
-  }
+  function lesson() { return loaded; }
 
   var panel, saveBtn, statusEl, countEl;
   var saveTimer = null;
-  var lastSaved = lesson().u;
+  var saving = false;
+  var lastSaved = 0;
 
   /* Read the whole panel back out of the DOM. Cheaper than tracking indexes,
      and it can never drift from what the user sees. */
@@ -76,12 +57,19 @@
     return d.o.length + d.i.length + Object.keys(d.a).length;
   }
 
-  function save() {
+  async function save() {
+    if (saving) return;
     var data = collect();
-    var all = loadAll();
-    all[here] = data;
-    try { localStorage.setItem(key(), JSON.stringify(all)); } catch (e) { /* private mode etc. */ }
-    lastSaved = data.u;
+    saving = true;
+    statusEl.textContent = 'saving\u2026';
+    var res = await Store.saveLessonNotes(COURSE.key, here, data);
+    saving = false;
+    if (res && res.error) {
+      statusEl.textContent = 'not saved \u2014 ' + res.error;
+      return;
+    }
+    loaded = data;
+    lastSaved = Date.now();
     stamp();
   }
 
@@ -355,9 +343,19 @@
     });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', build);
-  } else {
+  /* Called by assets/lesson.js once the session and lesson id are known. */
+  async function mount(course, file) {
+    COURSE = course;
+    here = file;
+    index = -1;
+    COURSE.lessons.forEach(function (l, i) { if (l.f === here) index = i; });
+    main = document.querySelector('main');
+    if (index === -1 || !main) return;
+
+    loaded = await Store.lessonNotes(COURSE.key, here);
+    lastSaved = loaded.u || 0;
     build();
   }
+
+  return { mount: mount };
 })();
