@@ -82,6 +82,7 @@ async function load(rel) {
   ok(dash.doc.querySelectorAll('.lms-nav-item').length === 4, 'sidebar has 4 nav items');
   ok(/Good (morning|afternoon|evening), Andrew/.test(dash.doc.getElementById('greeting').textContent), 'greeting shows the display name');
   ok(dash.doc.getElementById('fav-ref').textContent.includes('2 Timothy 2:15'), 'favourite verse defaults to 2 Timothy 2:15');
+  ok(dash.doc.getElementById('resume-kicker').textContent === 'Continue where you left off', 'a returning account gets the resume card');
   ok(dash.doc.getElementById('resume-title').textContent.includes('The Word Made Flesh'), 'resume points at the touched lesson');
   ok(dash.doc.getElementById('resume-meta').textContent.includes('you stopped at Interpretation'), 'resume shows the saved section');
   ok(dash.doc.querySelectorAll('#course-rows .course-row').length === 4, 'dashboard lists 4 courses');
@@ -169,7 +170,9 @@ async function load(rel) {
   const second = await set.win.Store.signUp('beth@example.com', 'Beth', 'another password');
   ok(second.ok === true, 'a second account can be created');
   const fresh = await load('index.html');
-  ok(fresh.doc.getElementById('resume').style.display === 'none', 'the resume card is hidden for a new account');
+  ok(fresh.doc.getElementById('resume-kicker').textContent === 'Start here', 'a new account is offered a start, not a resume');
+  ok(fresh.doc.getElementById('resume-btn').textContent === 'Start →', 'the button reads Start');
+  ok(fresh.doc.getElementById('resume-title').textContent.includes('How to Study Scripture'), 'it points at lesson 1');
   ok(!!fresh.doc.querySelector('.fav-banner'), 'the new account still gets the favourite verse banner');
   ok((await set.win.Store.allNotes()).length === 0, "a second account sees none of the first account's notes");
   ok(set.win.Store.quizHistory().length === 0, 'a second account has an empty quiz history');

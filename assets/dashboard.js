@@ -17,20 +17,26 @@ window.Page = async function (ctx) {
   });
 
   /* resume --------------------------------------------------------------- */
+  // With nothing to continue, the same card points a new reader at lesson one
+  // rather than claiming they left off somewhere.
   var resume = Store.resume();
-  if (resume) {
-    var c = courses[resume.course];
-    var l = resume.lesson;
-    document.getElementById('resume-title').textContent = (l.ref ? l.ref + ' · ' : '') + l.title;
-    var meta = ['Lesson ' + l.n + ' of ' + c.lessons.length, UI.unitShort(l.unit), '~' + l.mins + ' min'];
-    if (resume.section) meta.push('you stopped at ' + resume.section);
-    document.getElementById('resume-meta').textContent = meta.join(' · ');
-    document.getElementById('resume-btn').addEventListener('click', function () {
-      location.href = UI.lessonHref(ctx.root, resume.course, l.f);
-    });
-  } else {
-    document.getElementById('resume').style.display = 'none';
+  var starting = !resume;
+  if (starting) {
+    var firstKey = Object.keys(courses)[0];
+    resume = { course: firstKey, lesson: courses[firstKey].lessons[0], section: '' };
   }
+
+  var c = courses[resume.course];
+  var l = resume.lesson;
+  document.getElementById('resume-kicker').textContent = starting ? 'Start here' : 'Continue where you left off';
+  document.getElementById('resume-title').textContent = (l.ref ? l.ref + ' · ' : '') + l.title;
+  var meta = ['Lesson ' + l.n + ' of ' + c.lessons.length, UI.unitShort(l.unit), '~' + l.mins + ' min'];
+  if (resume.section) meta.push('you stopped at ' + resume.section);
+  document.getElementById('resume-meta').textContent = meta.join(' · ');
+  document.getElementById('resume-btn').textContent = starting ? 'Start →' : 'Resume →';
+  document.getElementById('resume-btn').addEventListener('click', function () {
+    location.href = UI.lessonHref(ctx.root, resume.course, l.f);
+  });
 
   /* my courses ----------------------------------------------------------- */
   var rows = document.getElementById('course-rows');
