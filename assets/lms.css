@@ -368,9 +368,11 @@ body.lms.lesson main > * { max-width: 820px; }
 
 @media (min-width: 1180px) {
   body.lms.lesson.has-notebook > main {
-    max-width: 1360px;
+    /* Prose holds a readable measure; the notes rail takes every remaining
+       pixel out to the window edge. */
+    max-width: none;
     display: grid;
-    grid-template-columns: minmax(0, 900px) minmax(300px, 360px);
+    grid-template-columns: minmax(0, 900px) minmax(320px, 1fr);
     column-gap: 40px;
     align-items: start;
   }
