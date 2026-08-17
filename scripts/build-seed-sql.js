@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-const ORDER = ['john', 'matthew', 'isaiah', 'trinity'];
+const ORDER = ['john', 'matthew', 'isaiah', 'romans', 'trinity'];
 
 global.window = {};
 require(path.join(ROOT, 'assets', 'data', 'courses.js'));

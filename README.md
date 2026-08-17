@@ -8,6 +8,7 @@ Verse-by-verse inductive study courses, published as a static LMS on GitHub Page
 | [Matthew](matthew/) | 79 | Complete, all 28 chapters |
 | [Isaiah](isaiah/) | 51 | In progress, through Isaiah 40:11 |
 | [John](john/) | 60 | Complete, all 21 chapters |
+| [Romans](romans/) | 52 | Complete, all 16 chapters |
 | [The Trinity](trinity/) | 24 | Complete, doctrine course |
 
 Courses come in two kinds: **book studies** (verse by verse through one book) and **doctrine
@@ -81,7 +82,7 @@ supabase/migrations/      0001 schema + RLS, 0002 content seed, 0003 grant tight
    is what protects the data. The `service_role` key and the database password must never go here.
 2. In the Supabase dashboard under Authentication, decide whether email confirmation is required.
    With it on, sign-up returns no session and the screen says to check your email first.
-3. `npm run db:migrate` to create the schema and seed the 214 lessons.
+3. `npm run db:migrate` to create the schema and seed the 266 lessons.
 
 Each page names its own screen script by assigning `window.Page`; `assets/shell.js` runs it after
 the sidebar is built and the visitor is known to be signed in.
@@ -124,7 +125,7 @@ Supabase project `bdkelzvemcoavpmezdeo` (ca-central-1), Postgres 17.
 
 | Table | Rows | Access |
 | --- | --- | --- |
-| `courses`, `units`, `lessons` | 4 / 35 / 214 | world-readable, seeded from `assets/data/courses.js` |
+| `courses`, `units`, `lessons` | 5 / 42 / 266 | world-readable, seeded from `assets/data/courses.js` |
 | `profiles` | one per account | display name, favourite verse, dark mode |
 | `lesson_progress` | one per lesson touched | resume section + completion, PK `(user_id, lesson_id)` |
 | `quiz_attempts` | append-only | every attempt; the UI shows the latest per lesson |

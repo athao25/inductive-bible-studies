@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-const COURSES = ['john', 'matthew', 'isaiah', 'trinity'];
+const COURSES = ['john', 'matthew', 'isaiah', 'romans', 'trinity'];
 
 let touched = 0, skipped = 0;
 

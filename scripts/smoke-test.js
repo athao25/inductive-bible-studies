@@ -85,14 +85,14 @@ async function load(rel) {
   ok(dash.doc.getElementById('resume-kicker').textContent === 'Continue where you left off', 'a returning account gets the resume card');
   ok(dash.doc.getElementById('resume-title').textContent.includes('The Word Made Flesh'), 'resume points at the touched lesson');
   ok(dash.doc.getElementById('resume-meta').textContent.includes('you stopped at Interpretation'), 'resume shows the saved section');
-  ok(dash.doc.querySelectorAll('#course-rows .course-row').length === 4, 'dashboard lists 4 courses');
+  ok(dash.doc.querySelectorAll('#course-rows .course-row').length === 5, 'dashboard lists 5 courses');
   ok(dash.doc.querySelector('#course-rows .pct').textContent === '3%', 'John reads 3% after 2 of 60');
   ok(dash.doc.querySelectorAll('#quiz-rows .quiz-row').length === 1, 'quiz history shows the recorded attempt');
   ok(!dash.errors.length, 'dashboard has no script errors' + (dash.errors[0] ? ': ' + dash.errors[0] : ''));
 
   // Catalog
   const cat = await load('courses.html');
-  ok(cat.doc.querySelectorAll('#catalog .catalog-card').length === 4, 'catalog renders 4 course cards');
+  ok(cat.doc.querySelectorAll('#catalog .catalog-card').length === 5, 'catalog renders 5 course cards');
   ok(cat.doc.querySelectorAll('.book').length === 71, 'canon map still lists 66 books + 5 doctrine courses');
   ok(!cat.errors.length, 'catalog has no script errors' + (cat.errors[0] ? ': ' + cat.errors[0] : ''));
 
